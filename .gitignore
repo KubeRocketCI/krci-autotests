@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+.env*
+!.env.example
+.pytest_cache/
+test-results/
+playwright-report/
+uv.lock.orig
+.ruff_cache/
+.import_linter_cache/
+.claude/settings.local.json

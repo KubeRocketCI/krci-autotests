@@ -1,0 +1,139 @@
+[project]
+name = "krci-autotests"
+version = "0.1.0"
+description = "KubeRocketCI platform E2E test harness (pytest + Playwright + krci_testkit)"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+requires-python = ">=3.14,<3.15"
+dependencies = [
+    "pydantic>=2.7",
+    "pydantic-settings>=2.3",
+    "kr8s>=0.20",
+    "httpx>=0.27",
+    "pyyaml>=6.0",
+    "pytest>=8.2",
+    "pytest-xdist>=3.6",
+    "pytest-rerunfailures>=14.0",
+    "pytest-timeout>=2.3",
+    "pytest-reportportal>=5.5",
+    "pytest-playwright>=0.5",
+    "playwright==1.61.0",
+    "python-dotenv>=1.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["krci_testkit"]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.6",
+    "import-linter>=2.0",
+    "datamodel-code-generator[http]>=0.26",
+    "pyright>=1.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v"
+timeout = 900
+timeout_method = "signal"
+timeout_func_only = true
+log_cli = true
+log_cli_level = "INFO"
+log_cli_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+log_cli_date_format = "%Y-%m-%d %H:%M:%S"
+markers = [
+    "smoke: fast confidence suite over the core platform path",
+    "regression: core regression suite",
+    "api: asserts primarily through CRDs/API",
+    "ui: asserts primarily through the browser",
+    "serial: must not run under xdist parallelism",
+    "journey: full-chain provider-certification journey",
+]
+filterwarnings = [
+    "ignore::urllib3.exceptions.InsecureRequestWarning",
+]
+# Launch name is suite-neutral: one ini cannot know which marker selection ran.
+# Tag a run from CI instead, e.g. -o rp_launch_attributes="suite:smoke".
+rp_launch = "krci-autotests"
+rp_verify_ssl = true
+
+[tool.ruff]
+target-version = "py314"
+line-length = 100
+exclude = ["krci_testkit/models/*.py"]  # generated code is not linted
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "TID", "ANN", "PT"]
+# Parameter annotations only: an unannotated fixture parameter is Any and defeats
+# the vocabulary checks. Return types on tests/fixtures are deliberate noise (ANN2);
+# explicit Any stays allowed where duck-typing is the point (ANN401).
+ignore = ["ANN2", "ANN401"]
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"requests".msg = "HTTP only inside krci_testkit (layering contract)"
+
+[tool.importlinter]
+root_packages = ["krci_testkit", "tests"]
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "testkit never imports tests"
+type = "forbidden"
+source_modules = ["krci_testkit"]
+forbidden_modules = ["tests"]
+
+[[tool.importlinter.contracts]]
+name = "raw k8s/http clients only inside krci_testkit"
+type = "forbidden"
+source_modules = ["tests"]
+forbidden_modules = ["kr8s", "kubernetes", "httpx", "requests"]
+# Indirect chains (tests -> krci_testkit -> kr8s) are the sanctioned path;
+# the contract bans DIRECT client usage in tests only.
+allow_indirect_imports = true
+# Sole exception: unit tests that inject httpx.MockTransport as a test seam. They
+# exercise krci_testkit's own HTTP code and perform no runtime HTTP themselves —
+# the ban exists to keep real HTTP out of tests, not the mock that replaces it.
+ignore_imports = [
+    "tests.unit.vcs_mock -> httpx",
+    "tests.unit.test_auth -> httpx",
+]
+
+[[tool.importlinter.contracts]]
+name = "playwright only under tests.ui"
+type = "forbidden"
+source_modules = [
+    "krci_testkit",
+    "tests.conftest",
+    "tests.utils",
+    "tests.test_data",
+    "tests.api",
+    "tests.unit",
+]
+forbidden_modules = ["playwright", "pytest_playwright"]
+allow_indirect_imports = true
+
+# The layering diagram itself, not just the three library bans: without this a
+# helper in tests/utils could import a test module it exists to serve, and the
+# dependency direction CLAUDE.md states would invert with lint still green.
+[[tool.importlinter.contracts]]
+name = "suites -> utils -> test data -> testkit"
+type = "layers"
+layers = ["tests.api | tests.ui | tests.unit", "tests.utils", "tests.test_data", "krci_testkit"]
+
+[tool.pyright]
+typeCheckingMode = "basic"
+# The rule CLAUDE.md calls load-bearing: an unannotated fixture parameter is `Any`,
+# and pyright then checks nothing in the test body. basic mode does not report it,
+# so the gate has to ask for it by name.
+reportMissingParameterType = "error"
+pythonVersion = "3.14"
+venvPath = "."
+venv = ".venv"
+# Generated models are pinned-schema output; the registry (__init__.py) rides along
+# unchecked — it is 60 lines, unit-tested, and ruff-covered.
+ignore = ["krci_testkit/models"]

@@ -1,0 +1,52 @@
+# Pinned schema sources: the operator repos are the source of truth for KRCI CRDs,
+# upstream release tags for Tekton and ArgoCD. Refs are pinned to the CRD versions
+# the suite is validated against.
+schemas:
+  - kind: Codebase
+    module: codebase
+    type: crd  # extract spec.versions[0].schema.openAPIV3Schema
+    url: https://raw.githubusercontent.com/epam/edp-codebase-operator/v2.35.0/deploy-templates/crds/v2.edp.epam.com_codebases.yaml
+    api_version: v2.edp.epam.com/v1
+  - kind: CodebaseBranch
+    module: codebasebranch
+    type: crd
+    url: https://raw.githubusercontent.com/epam/edp-codebase-operator/v2.35.0/deploy-templates/crds/v2.edp.epam.com_codebasebranches.yaml
+    api_version: v2.edp.epam.com/v1
+  - kind: GitServer
+    module: gitserver
+    type: crd
+    url: https://raw.githubusercontent.com/epam/edp-codebase-operator/v2.35.0/deploy-templates/crds/v2.edp.epam.com_gitservers.yaml
+    api_version: v2.edp.epam.com/v1
+  - kind: PipelineRun
+    module: pipelinerun
+    type: swagger  # definition v1.PipelineRun from Tekton swagger.json
+    url: https://raw.githubusercontent.com/tektoncd/pipeline/v1.6.2/pkg/apis/pipeline/v1/swagger.json
+    api_version: tekton.dev/v1
+  - kind: CDPipeline
+    module: cdpipeline
+    type: crd
+    url: https://raw.githubusercontent.com/epam/edp-cd-pipeline-operator/v2.32.0/deploy-templates/crds/v2.edp.epam.com_cdpipelines.yaml
+    api_version: v2.edp.epam.com/v1
+  - kind: Stage
+    module: stage
+    type: crd
+    url: https://raw.githubusercontent.com/epam/edp-cd-pipeline-operator/v2.32.0/deploy-templates/crds/v2.edp.epam.com_stages.yaml
+    api_version: v2.edp.epam.com/v1
+  - kind: CodebaseImageStream
+    module: codebaseimagestream
+    type: crd
+    url: https://raw.githubusercontent.com/epam/edp-codebase-operator/v2.35.0/deploy-templates/crds/v2.edp.epam.com_codebaseimagestreams.yaml
+    api_version: v2.edp.epam.com/v1
+  - kind: TriggerTemplate
+    module: triggertemplate
+    type: crd
+    # Schemaless upstream CRD (x-kubernetes-preserve-unknown-fields) -> the model
+    # is an anchor for the GVK registry; the suite reads TriggerTemplates raw.
+    # (The triggers swagger.json only vendors pipeline types — no TriggerTemplate.)
+    url: https://raw.githubusercontent.com/tektoncd/triggers/v0.36.0/config/300-triggertemplate.yaml
+    api_version: triggers.tekton.dev/v1beta1
+  - kind: Application
+    module: application
+    type: crd
+    url: https://raw.githubusercontent.com/argoproj/argo-cd/v3.4.3/manifests/crds/application-crd.yaml
+    api_version: argoproj.io/v1alpha1
