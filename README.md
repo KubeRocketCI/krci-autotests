@@ -29,10 +29,37 @@ The suite is environment-neutral: no cluster names, hosts or namespaces are hard
 Everything comes from configuration you provision per environment. Self-signed certificates
 are supported via `KRCI_VERIFY_SSL` / `KRCI_CA_BUNDLE`.
 
-## Prerequisites
+## Quick start
 
-- [uv](https://docs.astral.sh/uv/) (manages Python 3.14 per `.python-version`)
-- A running KubeRocketCI cluster and a kubeconfig context that reaches it
+Needs [uv](https://docs.astral.sh/uv/) (it installs Python 3.14 per `.python-version`), a
+running KubeRocketCI cluster, and a kubeconfig context that reaches it.
+
+```bash
+make install                      # dependencies + playwright chromium
+make unit-tests                   # offline check of the testkit — no cluster needed
+
+cp .env.example .env              # then fill the four values below
+make preflight                    # verify the cluster, GitServer, VCS auth and RBAC
+make bootstrap                    # onboard the gitops codebase — once per environment
+make test-smoke-api               # ~10 min against the cluster
+```
+
+The four values `.env` must carry for an API run:
+
+```bash
+KRCI_NAMESPACE=      # platform namespace holding the KRCI CRs
+KRCI_GIT_SERVER=     # GitServer CR name to test, e.g. gitlab
+KRCI_GIT_GROUP=      # VCS group/org the suite creates repos in, e.g. mygroup
+KRCI_KUBE_CONTEXT=   # only if the cluster is not your current kubeconfig context
+```
+
+Add `KRCI_PORTAL_URL` and `KRCI_PORTAL_TOKEN` for the UI suite (`make test-smoke-ui`); an
+API-only run needs neither. Every other variable has a working default — see
+[Configuration](#configuration).
+
+The API suite creates **real resources on the target cluster and Git server**: uniquely named
+codebases, their repositories, and changes that get merged. Point `KRCI_GIT_GROUP` at a group
+you are happy to have written to.
 
 ## Configuration
 
@@ -101,6 +128,7 @@ data as `build_timeout_factor` multipliers (effective wait = knob × factor).
 make install          # uv sync (installs Python 3.14 automatically) + playwright chromium
 make preflight        # verify the target environment before any test
 make bootstrap        # onboard environment prerequisites (gitops codebase), once per env
+make unit-tests       # offline tests of the testkit itself (no cluster)
 make test-smoke       # full smoke (API + UI)
 make test-smoke-api   # API smoke only
 make test-smoke-ui    # UI smoke only (headless)
@@ -110,6 +138,17 @@ make scenarios        # print the human-readable Given/When/Then catalog
 make lint             # ruff + import-linter layering gate
 ```
 
+### Environment prerequisites
+
+`make bootstrap` onboards what deploy scenarios need from the platform but never create
+themselves — today the gitops system codebase. It adopts an existing repo with the import
+strategy and provisions a new one otherwise, so re-running it after a partial cleanup is
+safe. Run it once per environment.
+
+Tests do not check for it. A deploy run against a namespace without a gitops repo fails on
+the ArgoCD assertion, which is the platform's own answer rather than a guard the suite
+supplies.
+
 Multi-GitServer clusters — one process per provider; run-ID naming keeps parallel runs
 collision-free:
 
@@ -118,12 +157,10 @@ KRCI_GIT_SERVER=gitlab KRCI_GIT_GROUP=krci  make test-regression &
 KRCI_GIT_SERVER=github KRCI_GIT_GROUP=myorg make test-regression &
 ```
 
-What to expect: the API suite creates **real resources on the target cluster and VCS** —
-uniquely-named Codebases, their repos, changes that get merged — and asserts on the
-PipelineRuns the platform renders in response. Smoke defaults to the platform's lightest
-build (helm library: lint + template) for fast feedback; heavier factories (go application:
-compile + sonar + container build) live in `tests/test_data/`. Teardown removes VCS repos
-best-effort.
+Smoke defaults to the platform's lightest build (helm library: lint + template) for fast
+feedback; heavier factories (go application: compile + sonar + container build) live in
+`tests/test_data/`. Teardown removes VCS repos best-effort, so the account behind the
+`GitServer` secret needs permission to delete them.
 
 UI debugging:
 
@@ -149,7 +186,7 @@ tests/
   */conftest.py   each suite owns its scenarios' fixtures; the root holds only
                   environment fixtures and the owned_codebase factory
   unit/           offline tests of the testkit itself
-scripts/          environment preflight, scenario catalog
+scripts/          environment preflight and bootstrap, scenario catalog
 codegen/          CRD model generation from pinned schemas
 ```
 
@@ -157,17 +194,6 @@ Layering is enforced by import-linter (`make lint`):
 `tests/* → tests/utils + tests/ui/pageobjects → krci_testkit → external libs`. Raw
 `kr8s`/`httpx`/`requests` live only inside `krci_testkit`; Playwright only under `tests/ui/`.
 See `CLAUDE.md` for the full authoring rules.
-
-### Environment prerequisites
-
-`make bootstrap` onboards what deploy scenarios need from the platform but never create
-themselves — today the gitops system codebase. It adopts an existing repo with the import
-strategy and provisions a new one otherwise, so re-running it after a partial cleanup is
-safe. Run it once per environment.
-
-Tests do not check for it. A deploy run against a namespace without a gitops repo fails on
-the ArgoCD assertion, which is the platform's own answer rather than a guard the suite
-supplies.
 
 ## Known limitations
 

@@ -83,6 +83,6 @@ tests/* → tests/utils + tests/ui/pageobjects → krci_testkit → external lib
 
 ## Workflow
 
-`make install` → `make preflight` → `make test-smoke`. Lint gate: `make lint` (ruff +
+`make install` → `make preflight` → `make bootstrap` → `make test-smoke`. Lint gate: `make lint` (ruff +
 import-linter) must pass before commit. Writing tests: use the `api-test-writer` /
 `ui-test-writer` skills.
