@@ -13,7 +13,7 @@ from krci_testkit.clients import VCSProvider
 from krci_testkit.clusters import Cluster
 from krci_testkit.naming import stage_cr_name
 from krci_testkit.waits import Timeouts
-from tests.test_data.codebase_data import go_application, smoke_change
+from tests.test_data.codebase_data import GO_GIN, created_codebase, smoke_change
 from tests.test_data.deploy_data import journey_pipeline
 from tests.utils.cdpipeline_utils import CDPipelineUtils
 from tests.utils.codebase_utils import CodebaseUtils
@@ -46,7 +46,7 @@ def journey_setup(
         cd_utils,
         cluster,
         timeouts,
-        data=go_application(prefix="jgo"),
+        data=created_codebase(GO_GIN, "jgo"),
         pipeline_factory=journey_pipeline,
     )
 

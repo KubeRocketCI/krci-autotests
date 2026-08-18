@@ -6,11 +6,13 @@ optional that starts serialising as an explicit null. Comparing the whole dict â
 not a few keys â€” is what catches that.
 """
 
+from krci_testkit.platform import VersioningType
 from tests.test_data.codebase_data import (
+    HELM_LIBRARY,
     BranchTestData,
-    cloned_helm_library,
-    helm_pipeline_library,
-    semver_helm_library,
+    cloned_codebase,
+    created_codebase,
+    imported_codebase,
 )
 from tests.test_data.deploy_data import manual_pipeline, promote_pipeline
 from tests.utils.cdpipeline_utils import cdpipeline_spec, stage_spec
@@ -20,7 +22,7 @@ _GIT = {"git_server": "gitlab", "git_group": "krci"}
 
 
 def test_codebase_spec_is_the_full_manifest_body():
-    data = helm_pipeline_library()
+    data = created_codebase(HELM_LIBRARY, "helm")
     assert codebase_spec(data, **_GIT) == {
         "type": "library",
         "strategy": "create",
@@ -41,7 +43,7 @@ def test_codebase_spec_does_not_leak_model_defaults_onto_the_wire():
     """The generated model carries the CRD's own defaults (private=True,
     clearSecretAfterUse=True, ...). Serialising them would restate the CRD as if
     the test meant it, and would pin values the platform may later change."""
-    spec = codebase_spec(helm_pipeline_library(), **_GIT)
+    spec = codebase_spec(created_codebase(HELM_LIBRARY, "helm"), **_GIT)
     assert "private" not in spec
     assert "commitMessagePattern" not in spec
 
@@ -49,18 +51,20 @@ def test_codebase_spec_does_not_leak_model_defaults_onto_the_wire():
 def test_codebase_spec_omits_unset_optionals_rather_than_sending_null():
     """An explicit null is not the same as an absent key to the API server: the
     default-versioning codebase must carry no startFrom and no repository at all."""
-    spec = codebase_spec(helm_pipeline_library(), **_GIT)
+    spec = codebase_spec(created_codebase(HELM_LIBRARY, "helm"), **_GIT)
     assert "startFrom" not in spec["versioning"]
     assert "repository" not in spec
 
 
 def test_codebase_spec_carries_semver_start_version():
-    spec = codebase_spec(semver_helm_library(), **_GIT)
+    spec = codebase_spec(
+        created_codebase(HELM_LIBRARY, "vhelm", versioning=VersioningType.SEMVER), **_GIT
+    )
     assert spec["versioning"] == {"type": "semver", "startFrom": "0.1.0-SNAPSHOT"}
 
 
 def test_codebase_spec_carries_the_clone_source():
-    spec = codebase_spec(cloned_helm_library(), **_GIT)
+    spec = codebase_spec(cloned_codebase(HELM_LIBRARY, "cln"), **_GIT)
     assert spec["strategy"] == "clone"
     assert spec["repository"] == {"url": "https://github.com/epmd-edp/helm-helm-pipeline.git"}
 
@@ -68,8 +72,7 @@ def test_codebase_spec_carries_the_clone_source():
 def test_codebase_spec_honours_an_explicit_git_url_path():
     """Import strategy onboards an EXISTING repo, so its path must survive verbatim
     instead of being derived from the run's git group."""
-    data = helm_pipeline_library()
-    imported = type(data)(**{**data.__dict__, "git_url_path": "/other-group/legacy-app"})
+    imported = imported_codebase(HELM_LIBRARY, "imp", "/other-group/legacy-app")
     assert codebase_spec(imported, **_GIT)["gitUrlPath"] == "/other-group/legacy-app"
 
 
