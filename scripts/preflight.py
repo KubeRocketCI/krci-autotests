@@ -10,8 +10,9 @@ import httpx
 
 from krci_testkit.auth import portal_token_identity
 from krci_testkit.clients import vcs_client
-from krci_testkit.clusters import Cluster, NotFound, connected_git_server
+from krci_testkit.clusters import Cluster, NotFound
 from krci_testkit.config import load_config
+from krci_testkit.git_servers import connected_git_server
 from krci_testkit.models import CDPipeline, Codebase, PipelineRun, Stage, name_of
 
 

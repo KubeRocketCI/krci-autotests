@@ -13,9 +13,10 @@ import logging
 import sys
 
 from krci_testkit.clients import vcs_client
-from krci_testkit.clusters import Cluster, connected_git_server
+from krci_testkit.clusters import Cluster
 from krci_testkit.config import KrciConfig, load_config
 from krci_testkit.errors import NotFound
+from krci_testkit.git_servers import connected_git_server
 from krci_testkit.gitops import GITOPS_NAME, GITOPS_SELECTOR, find_gitops
 from krci_testkit.models import (
     CiTool,

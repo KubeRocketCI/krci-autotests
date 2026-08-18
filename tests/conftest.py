@@ -6,8 +6,9 @@ import pytest
 from dotenv import load_dotenv
 
 from krci_testkit.clients import VCSProvider, vcs_client
-from krci_testkit.clusters import Cluster, connected_git_server
+from krci_testkit.clusters import Cluster
 from krci_testkit.config import KrciConfig, load_config
+from krci_testkit.git_servers import connected_git_server
 from krci_testkit.models import Codebase, GitServer, git_url_path_of
 from krci_testkit.reporting import reportportal_reachable
 from krci_testkit.waits import Timeouts, timeout_knobs

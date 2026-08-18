@@ -12,14 +12,13 @@ from pydantic import BaseModel, ValidationError
 
 from krci_testkit.config import KrciConfig
 from krci_testkit.errors import AlreadyExists, Malformed, NotFound
-from krci_testkit.models import GVK, GitServer
+from krci_testkit.models import GVK
 
 __all__ = [
     "AlreadyExists",
     "Cluster",
     "Malformed",
     "NotFound",
-    "connected_git_server",
     "validate_manifest",
 ]
 
@@ -237,15 +236,3 @@ class Cluster:
     def ping(self) -> str:
         """Cheap API-server reachability probe; returns the server version string."""
         return str(self._api.version())
-
-
-def connected_git_server(cluster: Cluster, name: str) -> GitServer:
-    """The GitServer under test — the suite's ONE provider-selection point.
-
-    name (KRCI_GIT_SERVER, required) picks the GitServer by CR name: selection is
-    always explicit, so a multi-provider cluster can never silently test an
-    arbitrary provider."""
-    git_server = cluster.get(GitServer, name)
-    if not (git_server.status and git_server.status.connected):
-        raise NotFound(f"GitServer/{name} exists but is not connected")
-    return git_server
