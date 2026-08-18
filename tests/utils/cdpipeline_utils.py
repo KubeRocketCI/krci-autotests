@@ -281,5 +281,4 @@ class CDPipelineUtils:
         verified = verified_stream_name(pipeline, stage, app)
         if self.cluster.exists(CodebaseImageStream, verified):
             stream = self.cluster.get(CodebaseImageStream, verified)
-            assert stream.spec is not None, f"CodebaseImageStream/{verified} has no spec"
             assert not stream.spec.tags, f"unexpected promoted tags in {verified}"

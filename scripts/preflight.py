@@ -28,12 +28,6 @@ def main() -> int:
 
     try:
         git_server = connected_git_server(cluster, cfg.git_server)
-        # A GitServer fetched from the cluster always carries a spec; the model only
-        # allows None because the generated schema doesn't distinguish "required in practice".
-        assert git_server.spec is not None, f"GitServer/{name_of(git_server)} has no spec"
-        assert git_server.spec.gitProvider is not None, (
-            f"GitServer/{name_of(git_server)} has no gitProvider"
-        )
         print(
             f"OK   gitserver: {name_of(git_server)} "
             f"({git_server.spec.gitProvider.value}) connected [KRCI_GIT_SERVER]"

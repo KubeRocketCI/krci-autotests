@@ -161,7 +161,6 @@ def vcs(
 ) -> VCSProvider:
     """Provider client built purely from platform state: GitServer CR -> its
     credential secret -> provider API. No provider facts live in env config."""
-    assert git_server.spec is not None, "GitServer has no spec"
     credentials = cluster.get_secret(git_server.spec.nameSshKeySecret)
     return vcs_client(
         git_server,

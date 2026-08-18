@@ -57,17 +57,13 @@ def name_of(model) -> str:
 
 
 def git_url_path_of(codebase) -> str:
-    """A Codebase's spec.gitUrlPath. The generated model types spec as optional
-    because the CRD schema cannot say "always present in practice", so every read
-    would otherwise need its own assert; one accessor keeps that noise out of
-    test bodies (same role as name_of)."""
-    assert codebase.spec is not None, f"Codebase/{name_of(codebase)} has no spec"
+    """A Codebase's spec.gitUrlPath — one named accessor for the repo path every
+    VCS call needs, so the field name lives in one place (same role as name_of)."""
     return codebase.spec.gitUrlPath
 
 
 def default_branch_of(codebase) -> str:
-    """A Codebase's spec.defaultBranch (see git_url_path_of for why accessors)."""
-    assert codebase.spec is not None, f"Codebase/{name_of(codebase)} has no spec"
+    """A Codebase's spec.defaultBranch."""
     return codebase.spec.defaultBranch
 
 

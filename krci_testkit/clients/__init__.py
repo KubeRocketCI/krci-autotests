@@ -85,15 +85,8 @@ def vcs_client(
     request_timeout: float = DEFAULT_REQUEST_TIMEOUT,
 ) -> VCSProvider:
     spec = git_server.spec
-    # Fetched-from-cluster GitServers always carry a spec; the model only allows
-    # None because the generated schema doesn't distinguish "required in practice".
-    assert spec is not None, f"GitServer/{name_of(git_server)} has no spec"
     available = sorted(p.value for p in _BUILDERS)
     git_provider = spec.gitProvider
-    if git_provider is None:
-        raise UnsupportedProvider(
-            f"GitServer/{name_of(git_server)} declares no gitProvider (available: {available})"
-        )
     try:
         builder = _BUILDERS[git_provider]
     except KeyError as exc:
