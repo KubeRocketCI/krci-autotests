@@ -8,13 +8,13 @@ not a few keys — is what catches that.
 
 from krci_testkit.platform import VersioningType
 from tests.test_data.codebase_data import (
-    HELM_LIBRARY,
     BranchTestData,
     cloned_codebase,
     created_codebase,
     imported_codebase,
 )
 from tests.test_data.deploy_data import manual_pipeline, promote_pipeline
+from tests.test_data.stacks import HELM_LIBRARY
 from tests.utils.cdpipeline_utils import cdpipeline_spec, stage_spec
 from tests.utils.codebase_utils import branch_spec, codebase_spec
 

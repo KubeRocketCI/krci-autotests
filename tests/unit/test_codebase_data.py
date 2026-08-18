@@ -1,83 +1,32 @@
-"""Guards on the test-data vocabulary itself (no cluster).
+"""Guards on the strategy builders (no cluster).
 
-lang/framework/buildTool is the platform's pipeline-library SELECTOR, and the CRD
-types all three as free `str` — so a typo produces a Codebase that reconciles
-fine and then never gets a matching pipeline. The failure only shows up after the
-full readiness/trigger timeout, which is exactly the 10-minute mystery the rest of
-the suite is built to avoid. Nothing can validate a stack offline against the
-platform, but we CAN keep the vocabulary closed: every Stack the module declares
-must be reachable through CATALOG, and every codebase must be built from one.
+The catalog's own shape is held by tests/unit/test_stacks.py; these cover what the
+builders do with a stack: carry it whole onto the test data, select the platform
+strategy the scenario asked for, and bind the start version to the versioning scheme.
 """
-
-import re
 
 import pytest
 
 from krci_testkit.naming import unique_name
 from krci_testkit.platform import VersioningType
-from tests.test_data import codebase_data
 from tests.test_data.codebase_data import (
-    CATALOG,
-    HELM_LIBRARY,
-    MAX_CATALOG_KEY,
     SEMVER_START,
     CodebaseTestData,
-    Stack,
     cloned_codebase,
     created_codebase,
     imported_codebase,
-    template_repo_url,
 )
-
-_DNS1123 = re.compile(r"[a-z0-9]([a-z0-9-]*[a-z0-9])?$")
-
-
-def _declared_stacks() -> dict[str, Stack]:
-    return {name: obj for name, obj in vars(codebase_data).items() if isinstance(obj, Stack)}
+from tests.test_data.stacks import CATALOG, HELM_LIBRARY, Stack
 
 
-def test_every_declared_stack_is_reachable_through_the_catalog():
-    """A Stack constant outside CATALOG is vocabulary nobody can parametrize over,
-    and the next scenario that wants it would sooner declare a fourth loose one."""
-    orphans = {
-        name: stack for name, stack in _declared_stacks().items() if stack not in CATALOG.values()
-    }
-    assert not orphans, f"stacks declared but absent from CATALOG: {sorted(orphans)}"
-
-
-def test_catalog_holds_no_duplicate_stacks():
-    """Two keys for one stack would run a parametrized scenario twice over
-    identical data while claiming two names' worth of coverage."""
-    selectors = [(s.lang, s.framework, s.build_tool) for s in CATALOG.values()]
-    assert len(selectors) == len(set(selectors)), f"duplicate stacks in CATALOG: {selectors}"
-
-
-@pytest.mark.parametrize("key", CATALOG)
-def test_catalog_keys_survive_a_derived_prefix(key: str):
-    """Keys are folded into a scenario's unique_name prefix (f"{scenario}-{key}").
-    unique_name truncates the prefix to fit its 30-char DNS-1123 budget, so a long
-    or non-DNS key would be silently chopped — and two parametrized cases whose
-    keys share a truncated head would then compute the SAME codebase name."""
-    assert len(key) <= MAX_CATALOG_KEY, f"catalog key {key!r} is too long to embed in a prefix"
-    assert _DNS1123.match(key), f"catalog key {key!r} is not DNS-1123 safe"
-
-
-def test_a_parametrized_scenario_gets_a_distinct_name_per_catalog_key():
-    """The prefix rule the module docstring states, exercised: scenario tag + key
-    must yield one name per stack, with the key still legible in the result."""
-    names = {key: created_codebase(stack, f"life-{key}").name for key, stack in CATALOG.items()}
-    assert len(set(names.values())) == len(CATALOG), f"prefix collision across catalog: {names}"
-
-
-@pytest.mark.parametrize("key", CATALOG)
-def test_builders_carry_the_whole_stack_onto_the_test_data(key: str):
+@pytest.mark.parametrize("stack", CATALOG.values(), ids=lambda s: s.key)
+def test_builders_carry_the_whole_stack_onto_the_test_data(stack: Stack):
     """Every strategy spreads the same stack fields, so a new Stack field cannot
     reach one builder and quietly miss the other two."""
-    stack = CATALOG[key]
     built = [
-        created_codebase(stack, f"c-{key}"),
-        imported_codebase(stack, f"i-{key}", "/group/seed"),
-        cloned_codebase(stack, f"l-{key}"),
+        created_codebase(stack, f"c-{stack.slug}"),
+        imported_codebase(stack, f"i-{stack.slug}", "/group/seed"),
+        cloned_codebase(stack, f"l-{stack.slug}"),
     ]
     for data in built:
         assert (data.lang, data.framework, data.build_tool) == (
@@ -103,10 +52,16 @@ def test_import_keeps_the_source_path_and_an_explicit_name():
     assert data.name == "seed"
 
 
-def test_clone_defaults_to_the_platforms_own_template_repo():
+def test_clone_defaults_to_the_stacks_own_template_repo():
     data = cloned_codebase(HELM_LIBRARY, "l")
-    assert data.repository_url == template_repo_url(HELM_LIBRARY)
-    assert data.repository_url == "https://github.com/epmd-edp/helm-helm-pipeline.git"
+    assert data.repository_url == HELM_LIBRARY.template_repo_url
+
+
+def test_clone_accepts_an_explicit_source():
+    """Marketplace templates live outside the scaffold naming, so the source stays
+    overridable rather than always derived."""
+    data = cloned_codebase(HELM_LIBRARY, "l2", repository_url="https://example.test/x.git")
+    assert data.repository_url == "https://example.test/x.git"
 
 
 def test_semver_derives_its_start_version():

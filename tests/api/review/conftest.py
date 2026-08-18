@@ -3,7 +3,8 @@
 import pytest
 
 from tests.conftest import OwnedCodebase
-from tests.test_data.codebase_data import HELM_LIBRARY, created_codebase
+from tests.test_data.codebase_data import created_codebase
+from tests.test_data.stacks import HELM_LIBRARY
 
 
 @pytest.fixture

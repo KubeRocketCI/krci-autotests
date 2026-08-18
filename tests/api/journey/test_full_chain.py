@@ -13,8 +13,9 @@ from krci_testkit.clients import VCSProvider
 from krci_testkit.clusters import Cluster
 from krci_testkit.naming import stage_cr_name
 from krci_testkit.waits import Timeouts
-from tests.test_data.codebase_data import GO_GIN, created_codebase, smoke_change
+from tests.test_data.codebase_data import created_codebase, smoke_change
 from tests.test_data.deploy_data import journey_pipeline
+from tests.test_data.stacks import GO_GIN
 from tests.utils.cdpipeline_utils import CDPipelineUtils
 from tests.utils.codebase_utils import CodebaseUtils
 from tests.utils.deploy_utils import (

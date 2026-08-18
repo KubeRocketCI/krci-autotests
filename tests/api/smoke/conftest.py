@@ -11,15 +11,9 @@ from krci_testkit.clusters import Cluster
 from krci_testkit.platform import VersioningType
 from krci_testkit.waits import Timeouts
 from tests.conftest import OwnedCodebase, OwnedImportedCodebase
-from tests.test_data.codebase_data import (
-    GO_GIN,
-    HELM_LIBRARY,
-    PY_FASTAPI,
-    cloned_codebase,
-    created_codebase,
-    imported_codebase,
-)
+from tests.test_data.codebase_data import cloned_codebase, created_codebase, imported_codebase
 from tests.test_data.deploy_data import CDPipelineTestData, journey_pipeline
+from tests.test_data.stacks import GO_GIN, HELM_LIBRARY, PY_FASTAPI
 from tests.utils.cdpipeline_utils import CDPipelineUtils
 from tests.utils.codebase_utils import CodebaseUtils
 from tests.utils.deploy_utils import CodebaseWithCd, codebase_with_cd_before_build

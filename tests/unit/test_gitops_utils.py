@@ -3,8 +3,9 @@ payload, and the feature/fastapi test-data shapes."""
 
 from krci_testkit import labels
 from krci_testkit.gitops import GITOPS_SELECTOR
-from tests.test_data.codebase_data import PY_FASTAPI, created_codebase, imported_codebase
+from tests.test_data.codebase_data import created_codebase, imported_codebase
 from tests.test_data.deploy_data import feature_pipeline, replica_override_values
+from tests.test_data.stacks import PY_FASTAPI
 from tests.utils.gitops_utils import gitops_values_path
 
 

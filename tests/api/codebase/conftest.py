@@ -10,10 +10,10 @@ after the strategy under test, and would otherwise rebind the builder they call.
 import pytest
 
 from tests.conftest import OwnedCodebase, OwnedImportedCodebase
-from tests.test_data.codebase_data import HELM_LIBRARY
 from tests.test_data.codebase_data import cloned_codebase as cloned_codebase_data
 from tests.test_data.codebase_data import created_codebase as created_codebase_data
 from tests.test_data.codebase_data import imported_codebase as imported_codebase_data
+from tests.test_data.stacks import HELM_LIBRARY
 
 
 @pytest.fixture

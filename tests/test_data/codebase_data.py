@@ -1,111 +1,35 @@
-"""Test data factories — no literals in test bodies.
+"""Codebase test data — no literals in test bodies.
 
-A codebase is described by two independent things, and they are kept apart:
+A codebase is described by two independent things, kept apart:
 
-- WHAT is onboarded — the `Stack` (lang/framework/build_tool + codebase type +
-  build cost). Every stack the suite may onboard is declared once in `CATALOG`.
+- WHAT is onboarded — the `Stack` (tests/test_data/stacks.py), which is the
+  platform's pipeline selector.
 - HOW it is onboarded — the platform's three strategies, one builder each:
   `created_codebase` / `imported_codebase` / `cloned_codebase`, each taking the
   versioning scheme as a keyword.
 
 Every stack therefore works with every strategy and every versioning scheme
-without a new factory, and a new language is one `CATALOG` entry.
+without a new factory.
 
 PREFIX RULE: unique_name(prefix) is deterministic per prefix within a process and
 the owned_codebase factory refuses a prefix already claimed by another test, so a
-scenario that parametrizes over CATALOG must derive its prefix from BOTH its own
-tag and the catalog key — f"{scenario}-{key}", never the bare key, or two
-parametrized scenarios collide on one name. Catalog keys stay short for the same
-reason: unique_name truncates the prefix to fit a 30-char DNS-1123 budget.
+scenario that parametrizes over stacks must derive its prefix from BOTH its own
+tag and the stack's slug — f"{scenario}-{stack.slug}", never the slug alone, or
+two parametrized scenarios collide on one name.
 """
 
 from dataclasses import dataclass, field
-from typing import Literal
 
 from krci_testkit import labels
 from krci_testkit.clients.protocol import MergeStrategy
 from krci_testkit.models import CodebaseStrategy
 from krci_testkit.naming import unique_name
 from krci_testkit.platform import VersioningType
-
-# CR-spec vocabulary. Where the CRD declares an enum, the GENERATED enum is used
-# directly (CodebaseStrategy) — a second hand-written copy would drift silently on
-# the next `make generate`. Closed-but-unmarked-in-schema sets live in
-# krci_testkit.platform (VersioningType); Literals cover the genuinely free fields.
-CodebaseType = Literal["application", "library", "autotest", "system"]
+from tests.test_data.stacks import CodebaseType, Stack
 
 # The version a semver codebase starts from. Semver is a scheme, not a number:
 # scenarios select the scheme and the start version travels with it.
 SEMVER_START = "0.1.0-SNAPSHOT"
-
-
-@dataclass(frozen=True)
-class Stack:
-    """WHAT a codebase is built from: the lang/framework/build_tool selector the
-    platform resolves its pipelines by, plus the codebase type and build cost that
-    travel with that choice.
-
-    The CRD types all three selector fields as free `str`, so a typo produces a
-    Codebase that reconciles fine and then never gets a matching pipeline. Declaring
-    stacks as constants in CATALOG is what keeps the vocabulary closed.
-    """
-
-    lang: str
-    framework: str
-    build_tool: str
-    codebase_type: CodebaseType = "application"
-    # Workload-relative build cost. Effective build wait =
-    # krci_timeout_build_success * build_timeout_factor: the run knob knows how
-    # fast the CLUSTER is, the stack knows how heavy the WORKLOAD is — the two
-    # compose instead of forcing one global number.
-    build_timeout_factor: float = 1.0
-
-
-# The platform's lightest stack (helm lint + template — no compile, no sonar, no
-# container build): the default for every test that needs speed over depth.
-HELM_LIBRARY = Stack(
-    lang="helm",
-    framework="pipeline",
-    build_tool="helm",
-    codebase_type="library",
-    build_timeout_factor=0.5,
-)
-
-# Full python application path (pip install + sonar + kaniko image build). fastapi is
-# the python tile the platform ships ENABLED by default (pipelines-library values:
-# deployableResources.python.fastapi=true; the plain python3.13 flavor is disabled
-# out of the box). Base image python:3.13-alpine is multi-arch (arm64-safe).
-PY_FASTAPI = Stack(lang="python", framework="fastapi", build_tool="python")
-
-# Full application path (compile + sonar + container build) — heavier than helm but
-# exercises the complete build chain; used when depth matters over speed.
-GO_GIN = Stack(lang="go", framework="gin", build_tool="go")
-
-# Every stack this suite may onboard. Adding a language is ONE entry here and it
-# works with all three strategies and both versioning schemes immediately; the key
-# is what a parametrized scenario iterates and folds into its unique_name prefix.
-CATALOG: dict[str, Stack] = {
-    "helm": HELM_LIBRARY,
-    "py": PY_FASTAPI,
-    "go": GO_GIN,
-}
-
-# Longest catalog key that still leaves room for a scenario tag inside
-# unique_name's 30-char budget; asserted in tests/unit/test_codebase_data.py.
-MAX_CATALOG_KEY = 4
-
-_TEMPLATE_REPO_OWNER = "https://github.com/epmd-edp"
-
-
-def template_repo_url(stack: Stack) -> str:
-    """The public template repo the platform's own create strategy clones for a
-    stack (BuildTemplateRepoUrl: <lang>-<buildTool>-<framework>).
-
-    Clone scenarios use it as their source: the content matches the stack's
-    pipelines and it needs no clone credentials, so what differs from create is
-    purely the operator path under test (spec.repository.url -> clone -> squash ->
-    push, vs template provisioning)."""
-    return f"{_TEMPLATE_REPO_OWNER}/{stack.lang}-{stack.build_tool}-{stack.framework}.git"
 
 
 @dataclass(frozen=True)
@@ -236,7 +160,7 @@ def cloned_codebase(
         name=unique_name(prefix),
         strategy=CodebaseStrategy.clone,
         versioning=versioning,
-        repository_url=repository_url or template_repo_url(stack),
+        repository_url=repository_url or stack.template_repo_url,
     )
 
 
