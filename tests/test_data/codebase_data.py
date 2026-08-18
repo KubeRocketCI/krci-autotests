@@ -125,12 +125,13 @@ def created_codebase(
 def imported_codebase(
     stack: Stack,
     prefix: str,
-    source_git_url_path: str,
+    source_git_url_path: str | None = None,
     *,
     name: str | None = None,
     versioning: VersioningType = VersioningType.DEFAULT,
 ) -> CodebaseTestData:
-    """Import strategy: onboard an EXISTING repo at source_git_url_path.
+    """Import strategy: onboard an EXISTING repo at source_git_url_path
+    (None -> the /{git_group}/{name} default, matching where the seed lands).
 
     name re-imports under a chosen name instead of a fresh one. That matters for
     deploys: images push to <registry-space>/<codebase-name>, and a registry only

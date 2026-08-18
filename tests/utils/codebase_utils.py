@@ -26,6 +26,13 @@ from tests.test_data.codebase_data import BranchTestData, CodebaseTestData
 log = logging.getLogger(__name__)
 
 
+def derive_git_url_path(data: CodebaseTestData, git_group: str) -> str:
+    """The repo path a Codebase lands at when the data does not pin one. A repo
+    seeded ahead of the CR (the import flow) must land at the SAME path the CR
+    will derive — one formula, or the two silently drift apart."""
+    return data.git_url_path or f"/{git_group}/{data.name}"
+
+
 def codebase_spec(data: CodebaseTestData, *, git_server: str, git_group: str) -> dict:
     """The Codebase manifest body, built as the generated CRD model rather than a
     hand-rolled dict: a wrong field name or enum value is a pyright error here
@@ -41,7 +48,7 @@ def codebase_spec(data: CodebaseTestData, *, git_server: str, git_group: str) ->
         defaultBranch=data.default_branch,
         emptyProject=data.empty_project,
         gitServer=git_server,
-        gitUrlPath=data.git_url_path or f"/{git_group}/{data.name}",
+        gitUrlPath=derive_git_url_path(data, git_group),
         deploymentScript=data.deployment_script,
         versioning=Versioning(type=data.versioning_type, startFrom=data.versioning_start_from),
         ciTool=CiTool.tekton,

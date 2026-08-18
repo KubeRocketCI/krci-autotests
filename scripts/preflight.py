@@ -63,6 +63,29 @@ def main() -> int:
         except Exception as exc:  # noqa: BLE001
             failures.append(f"portal check failed: {exc}")
 
+    # The import seed fetches template tarballs from api.github.com. Anonymous
+    # access is capped (~60/hour/IP) — enough for a few cases, not for a catalog
+    # sweep — so unset is a skip with the consequence named, and a set token that
+    # GitHub rejects must fail HERE, not as a mid-sweep 403 that reads like a
+    # network fault.
+    if cfg.github_token is None:
+        print(
+            "SKIP github token: KRCI_GITHUB_TOKEN unset "
+            "(anonymous tarball fetches, ~60/hour — too few for import-matrix)"
+        )
+    else:
+        try:
+            resp = httpx.get(
+                "https://api.github.com/rate_limit",
+                headers={"Authorization": f"Bearer {cfg.github_token.get_secret_value()}"},
+                timeout=30,
+            )
+            resp.raise_for_status()
+            remaining = resp.json()["resources"]["core"]["remaining"]
+            print(f"OK   github token: accepted ({remaining} API calls remaining)")
+        except Exception as exc:  # noqa: BLE001
+            failures.append(f"github token check failed: {exc}")
+
     if cfg.portal_token is None:
         print("SKIP portal token: KRCI_PORTAL_TOKEN unset (UI tests cannot run)")
     else:

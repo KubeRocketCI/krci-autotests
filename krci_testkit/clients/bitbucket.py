@@ -8,6 +8,7 @@ validation requires a Bitbucket-connected cluster; translation is unit-tested.
 """
 
 import logging
+from collections.abc import Mapping
 
 import httpx
 
@@ -53,6 +54,15 @@ _STATE_TO_NEUTRAL = {
 # paths, so a file named "branch" or "message" would overwrite it.
 _RESERVED_SRC_FIELDS = frozenset({"branch", "message", "author", "parents", "files"})
 
+
+def _reject_reserved_src_collisions(files: Mapping[str, object]) -> None:
+    if collisions := _RESERVED_SRC_FIELDS & files.keys():
+        raise ValueError(
+            f"file path(s) {sorted(collisions)} collide with reserved Bitbucket "
+            "/src form fields; the commit metadata would be overwritten silently"
+        )
+
+
 _PAGE_SIZE = 100
 
 
@@ -92,6 +102,30 @@ class BitbucketClient:
         resp.raise_for_status()
         return True
 
+    def create_repo(
+        self,
+        git_url_path: str,
+        *,
+        default_branch: str,
+        files: dict[str, str | bytes],
+    ) -> None:
+        """Seed for an import source — a repo the platform did not shape; the repo
+        is never handed over empty, content lands before this returns. The first
+        /src commit creates default_branch and Bitbucket makes it the main branch.
+        Binary content rides as multipart file parts; text stays in the form (the
+        /src endpoint accepts both in one request)."""
+        repo = _repo(git_url_path)
+        _reject_reserved_src_collisions(files)
+        self._http.post(repo, json={"scm": "git", "is_private": True}).raise_for_status()
+        text = {p: c for p, c in files.items() if isinstance(c, str)}
+        binary = [(p, (p, c)) for p, c in files.items() if isinstance(c, bytes)]
+        self._http.post(
+            f"{repo}/src",
+            data={**text, "branch": default_branch, "message": "Initial commit"},
+            files=binary or None,
+        ).raise_for_status()
+        log.info("created repo %s with %d files on %s", git_url_path, len(files), default_branch)
+
     def submit_change(
         self,
         git_url_path: str,
@@ -102,11 +136,7 @@ class BitbucketClient:
         files: dict[str, str],
     ) -> Change:
         repo = _repo(git_url_path)
-        if collisions := _RESERVED_SRC_FIELDS & files.keys():
-            raise ValueError(
-                f"file path(s) {sorted(collisions)} collide with reserved Bitbucket "
-                "/src form fields; the commit metadata would be overwritten silently"
-            )
+        _reject_reserved_src_collisions(files)
         resp = self._http.get(f"{repo}/refs/branches/{path_segment(target_branch)}")
         resp.raise_for_status()
         base_hash = resp.json()["target"]["hash"]

@@ -97,6 +97,74 @@ class GitHubClient:
         resp.raise_for_status()
         return True
 
+    def create_repo(
+        self,
+        git_url_path: str,
+        *,
+        default_branch: str,
+        files: dict[str, str | bytes],
+    ) -> None:
+        """Seed for an import source — a repo the platform did not shape; the repo
+        is never handed over empty, content lands before this returns.
+
+        Content goes through the Git Data API (blobs -> one tree -> one commit ->
+        ref): one commit like the other providers, where the Contents API would
+        write a commit per file and contend on the branch head. Creating the ref
+        makes default_branch the repo's first — and therefore default — branch."""
+        owner, name = git_url_path.strip("/").split("/", 1)
+        resp = self._http.post(
+            f"/orgs/{path_segment(owner)}/repos",
+            json={"name": name, "private": True, "auto_init": False},
+        )
+        if resp.status_code == httpx.codes.NOT_FOUND:
+            # The owner is a user account, not an organization; a user token can
+            # only create repos under the authenticated user.
+            resp = self._http.post(
+                "/user/repos", json={"name": name, "private": True, "auto_init": False}
+            )
+        resp.raise_for_status()
+        created_path = str(resp.json().get("full_name", ""))
+        # full_name carries GitHub's canonical casing; the configured group may not.
+        if created_path.casefold() != f"{owner}/{name}".casefold():
+            # The org-404 also covers "org missing" and "token lacks scope" — the
+            # fallback then lands the repo under the token's own user, where every
+            # later call 404s confusingly. Remove the stray and fail loudly.
+            self.delete_repo(created_path)
+            raise ValueError(
+                f"repo was created as '{created_path}', not the requested "
+                f"'{owner}/{name}' — owner is not an organization the token can "
+                "create in (missing org or missing scope)"
+            )
+        repo = _repo(git_url_path)
+        tree = []
+        for path, content in files.items():
+            raw = content.encode() if isinstance(content, str) else content
+            blob = self._http.post(
+                f"{repo}/git/blobs",
+                json={"content": base64.b64encode(raw).decode(), "encoding": "base64"},
+            )
+            blob.raise_for_status()
+            tree.append(
+                {
+                    "path": path.lstrip("/"),
+                    "mode": "100644",
+                    "type": "blob",
+                    "sha": blob.json()["sha"],
+                }
+            )
+        resp = self._http.post(f"{repo}/git/trees", json={"tree": tree})
+        resp.raise_for_status()
+        resp = self._http.post(
+            f"{repo}/git/commits",
+            json={"message": "Initial commit", "tree": resp.json()["sha"], "parents": []},
+        )
+        resp.raise_for_status()
+        self._http.post(
+            f"{repo}/git/refs",
+            json={"ref": f"refs/heads/{default_branch}", "sha": resp.json()["sha"]},
+        ).raise_for_status()
+        log.info("created repo %s with %d files on %s", git_url_path, len(files), default_branch)
+
     def submit_change(
         self,
         git_url_path: str,

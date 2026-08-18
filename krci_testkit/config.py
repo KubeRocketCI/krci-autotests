@@ -27,6 +27,9 @@ class KrciConfig(BaseSettings):
     # multi-provider clusters an implicit "first connected" pick would silently
     # test an arbitrary provider). Change KRCI_GIT_GROUP together with this.
     git_server: str
+    # Optional token for fetching template tarballs from api.github.com: anonymous
+    # calls are capped at ~60/hour/IP, which an import sweep over the catalog exceeds.
+    github_token: SecretStr | None = None
     verify_ssl: bool = True
     ca_bundle: Path | None = None
 

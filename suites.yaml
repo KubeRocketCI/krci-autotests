@@ -37,8 +37,8 @@ regression:
   description: Core regression - onboarding strategies, branch CRUD, CD flows.
   parallel: 0
   tests:
-    - tests/api/codebase/test_codebase_lifecycle.py::test_codebase_import_lifecycle
-    - tests/api/codebase/test_codebase_lifecycle.py::test_codebase_clone_lifecycle
+    - "tests/api/codebase/test_codebase_lifecycle.py::test_codebase_import_lifecycle[helm-helm-pipeline-lib]"
+    - "tests/api/codebase/test_codebase_lifecycle.py::test_codebase_clone_lifecycle[helm-helm-pipeline-lib]"
     - tests/api/codebase/test_merge_strategy.py
     - tests/api/branch/test_branch_lifecycle.py
     - tests/api/deploy/test_deploy.py
@@ -61,6 +61,27 @@ stack-matrix:
   parallel: 3
   tests:
     - tests/api/codebase/test_codebase_lifecycle.py::test_codebase_create_lifecycle
+
+clone-matrix:
+  description: Clone-strategy onboarding for every stack - the long sweep.
+  parallel: 3
+  tests:
+    - tests/api/codebase/test_codebase_lifecycle.py::test_codebase_clone_lifecycle
+
+import-matrix:
+  description: Import-strategy onboarding for every stack - the long sweep
+    (each case seeds the repo from the stack's public source before importing).
+  parallel: 3
+  tests:
+    - tests/api/codebase/test_codebase_lifecycle.py::test_codebase_import_lifecycle
+
+external-sources:
+  description: Onboarding from named external source repos (external_sources.py).
+  parallel: 2
+  tests:
+    # Case id = the external_sources.py entry key.
+    - "tests/api/codebase/test_external_source.py::test_external_clone_lifecycle[epmd-edp-java-gradle-java21-lib]"
+    - "tests/api/codebase/test_external_source.py::test_external_import_lifecycle[epmd-edp-java-maven-java21-app]"
 
 unit:
   description: The testkit's own checks - offline, no cluster.

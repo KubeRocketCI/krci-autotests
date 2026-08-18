@@ -74,6 +74,7 @@ variables win over file values. Copy `.env.example` to `.env` to start.
 | `KRCI_PORTAL_TOKEN` | ServiceAccount bearer token for portal login                             | required for UI |
 | `KRCI_GIT_GROUP`    | VCS group/org path prefix for created repos (see below)                  | required        |
 | `KRCI_GIT_SERVER`   | GitServer CR name to test — always explicit; change `KRCI_GIT_GROUP` together with it (org paths differ per provider) | required |
+| `KRCI_GITHUB_TOKEN` | token for template-tarball fetches from api.github.com (import seeds); anonymous is ~60/hour — required in practice for `import-matrix` | empty |
 | `KRCI_VERIFY_SSL`   | TLS verification (false for self-signed environments)                    | `true`          |
 | `KRCI_CA_BUNDLE`    | optional CA bundle path                                                  | empty           |
 | `KRCI_RUN_ID`       | run identity suffix for resource names                                   | auto-generated  |

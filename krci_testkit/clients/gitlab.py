@@ -4,6 +4,7 @@ Verbs are provider-neutral (a GitLab merge request is a "change"): every other
 provider client implements the same verbs natively, behind `VCSProvider`.
 """
 
+import base64
 import logging
 from urllib.parse import quote
 
@@ -91,6 +92,42 @@ class GitLabClient:
             return False
         resp.raise_for_status()
         return True
+
+    def create_repo(
+        self,
+        git_url_path: str,
+        *,
+        default_branch: str,
+        files: dict[str, str | bytes],
+    ) -> None:
+        """Seed for an import source — a repo the platform did not shape; the
+        project is never handed over empty, content lands before this returns.
+        The first commit creates default_branch, and GitLab makes the first
+        branch the default."""
+        namespace, name = git_url_path.strip("/").rsplit("/", 1)
+        resp = self._http.get("/namespaces", params={"search": namespace})
+        resp.raise_for_status()
+        # search matches substrings; only the exact full_path is the namespace asked for
+        matches = [n for n in resp.json() if n["full_path"] == namespace]
+        if not matches:
+            raise ValueError(
+                f"GitLab namespace {namespace!r} not found — the repo cannot be "
+                "created under a group the token does not see"
+            )
+        self._http.post(
+            "/projects",
+            json={
+                "path": name,
+                "namespace_id": matches[0]["id"],
+                "initialize_with_readme": False,
+            },
+        ).raise_for_status()
+        actions = [_create_action(path, content) for path, content in files.items()]
+        self._http.post(
+            f"/projects/{_project(git_url_path)}/repository/commits",
+            json={"branch": default_branch, "commit_message": "Initial commit", "actions": actions},
+        ).raise_for_status()
+        log.info("created repo %s with %d files on %s", git_url_path, len(files), default_branch)
 
     def submit_change(
         self,
@@ -222,6 +259,18 @@ class GitLabClient:
 
 def _project(git_url_path: str) -> str:
     return quote(git_url_path.strip("/"), safe="")
+
+
+def _create_action(path: str, content: str | bytes) -> dict[str, str]:
+    """Binary content rides as base64 — GitLab's text encoding rejects raw bytes."""
+    if isinstance(content, bytes):
+        return {
+            "action": "create",
+            "file_path": path,
+            "content": base64.b64encode(content).decode(),
+            "encoding": "base64",
+        }
+    return {"action": "create", "file_path": path, "content": content}
 
 
 def _next_page(resp: httpx.Response, path: str) -> Request | None:

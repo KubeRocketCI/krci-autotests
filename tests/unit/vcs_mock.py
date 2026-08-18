@@ -42,6 +42,18 @@ class Recorder:
         return httpx.MockTransport(self.handler)
 
 
+def raw_transport(content: bytes, *, expect_path: str):
+    """Transport serving one raw (non-JSON) body — the double for tarball fetches.
+    expect_path pins the endpoint so a wrong URL fails the test, not the decode."""
+    import httpx
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == expect_path
+        return httpx.Response(200, content=content)
+
+    return httpx.MockTransport(handler)
+
+
 def failing_transport(message: str = "connection refused"):
     """Transport whose every request fails at the socket level — the double for
     'server is down' paths (e.g. the ReportPortal reachability probe)."""

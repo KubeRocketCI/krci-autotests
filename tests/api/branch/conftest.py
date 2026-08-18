@@ -33,11 +33,10 @@ def cloned_semver_codebase(owned_codebase: OwnedCodebase):
 
 @pytest.fixture
 def imported_fastapi_codebase(owned_imported_codebase: OwnedImportedCodebase):
-    """Import-strategy fastapi application, re-imported UNDER THE SEED'S NAME
-    (registry image paths must match an existing GitLab project)."""
-    seed = created_codebase(PY_FASTAPI, "pysd")
+    """Import-strategy fastapi application over a repo seeded from the stack's
+    public source repo — an existing repo the platform did not shape."""
     return owned_imported_codebase(
-        seed, lambda path: imported_codebase(PY_FASTAPI, "pysd", path, name=seed.name)
+        PY_FASTAPI.template_repo_url, imported_codebase(PY_FASTAPI, "pysd")
     )
 
 

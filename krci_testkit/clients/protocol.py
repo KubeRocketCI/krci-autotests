@@ -62,6 +62,7 @@ def http_client(
     verify: bool | str,
     transport: httpx.BaseTransport | None,
     request_timeout: float,
+    follow_redirects: bool = False,
 ) -> httpx.Client:
     """Shared client plumbing for the provider adapters (uniform timeout/transport).
 
@@ -74,6 +75,7 @@ def http_client(
         verify=verify,
         timeout=request_timeout,
         transport=transport,
+        follow_redirects=follow_redirects,
     )
 
 
@@ -184,6 +186,14 @@ class VCSProvider(Protocol):
     def ping(self) -> str: ...
 
     def repo_exists(self, git_url_path: str) -> bool: ...
+
+    def create_repo(
+        self,
+        git_url_path: str,
+        *,
+        default_branch: str,
+        files: dict[str, str | bytes],
+    ) -> None: ...
 
     def submit_change(
         self,

@@ -166,6 +166,87 @@ def test_github_client_satisfies_protocol():
     assert isinstance(_client(Recorder({})), VCSProvider)
 
 
+def test_create_repo_under_org_seeds_one_commit_via_git_data():
+    repo = "/repos/grp/app"
+    rec = Recorder(
+        {
+            ("POST", "/orgs/grp/repos"): [(201, {"full_name": "grp/app"})],
+            ("POST", f"{repo}/git/blobs"): [(201, {"sha": "b1"}), (201, {"sha": "b2"})],
+            ("POST", f"{repo}/git/trees"): [(201, {"sha": "t1"})],
+            ("POST", f"{repo}/git/commits"): [(201, {"sha": "c1"})],
+            ("POST", f"{repo}/git/refs"): [(201, {"ref": "refs/heads/main"})],
+        }
+    )
+    _client(rec).create_repo(
+        "/grp/app",
+        default_branch="main",
+        files={"go.mod": "module app\n", "main.go": "package main\n"},
+    )
+    create_body = json.loads(rec.requests[0].content)
+    assert create_body == {"name": "app", "private": True, "auto_init": False}
+    tree_body = json.loads(rec.requests[3].content)
+    assert [e["path"] for e in tree_body["tree"]] == ["go.mod", "main.go"]
+    assert [e["sha"] for e in tree_body["tree"]] == ["b1", "b2"]
+    commit_body = json.loads(rec.requests[4].content)
+    assert commit_body == {"message": "Initial commit", "tree": "t1", "parents": []}
+    ref_body = json.loads(rec.requests[5].content)
+    assert ref_body == {"ref": "refs/heads/main", "sha": "c1"}
+
+
+def test_create_repo_falls_back_to_user_when_owner_is_no_org():
+    """GitHub only creates under /orgs/{owner} for organizations; a user-account
+    owner answers 404 there and the repo must land under the authenticated user
+    instead of surfacing a misleading not-found."""
+    repo = "/repos/edp-robot/app"
+    rec = Recorder(
+        {
+            ("POST", "/orgs/edp-robot/repos"): [(404, {"message": "Not Found"})],
+            ("POST", "/user/repos"): [(201, {"full_name": "edp-robot/app"})],
+            ("POST", f"{repo}/git/blobs"): [(201, {"sha": "b1"})],
+            ("POST", f"{repo}/git/trees"): [(201, {"sha": "t1"})],
+            ("POST", f"{repo}/git/commits"): [(201, {"sha": "c1"})],
+            ("POST", f"{repo}/git/refs"): [(201, {"ref": "refs/heads/main"})],
+        }
+    )
+    _client(rec).create_repo("/edp-robot/app", default_branch="main", files={"f.txt": "x\n"})
+    assert [r.url.path for r in rec.requests[:2]] == ["/orgs/edp-robot/repos", "/user/repos"]
+
+
+def test_create_repo_accepts_canonical_casing_of_the_requested_owner():
+    """GitHub's full_name carries the org's canonical casing; the configured
+    group may be cased differently. A casing difference is the SAME owner and
+    must not be treated as a wrong-place landing (which deletes the repo)."""
+    repo = "/repos/GRP/app"
+    rec = Recorder(
+        {
+            ("POST", "/orgs/GRP/repos"): [(201, {"full_name": "grp/app"})],
+            ("POST", f"{repo}/git/blobs"): [(201, {"sha": "b1"})],
+            ("POST", f"{repo}/git/trees"): [(201, {"sha": "t1"})],
+            ("POST", f"{repo}/git/commits"): [(201, {"sha": "c1"})],
+            ("POST", f"{repo}/git/refs"): [(201, {"ref": "refs/heads/main"})],
+        }
+    )
+    _client(rec).create_repo("/GRP/app", default_branch="main", files={"f": "x"})
+    assert all(r.method != "DELETE" for r in rec.requests)  # nothing was "cleaned up"
+
+
+def test_create_repo_rejects_repo_landing_under_wrong_owner():
+    """The org 404 also means "org missing" or "token lacks scope" — the user
+    fallback then creates the repo under the token's own account, at a path the
+    rest of the run never looks at. The stray must be removed and the mismatch
+    named, instead of every later call 404ing confusingly."""
+    rec = Recorder(
+        {
+            ("POST", "/orgs/some-org/repos"): [(404, {"message": "Not Found"})],
+            ("POST", "/user/repos"): [(201, {"full_name": "token-user/app"})],
+            ("DELETE", "/repos/token-user/app"): [(204, {})],
+        }
+    )
+    with pytest.raises(ValueError, match="token-user/app"):
+        _client(rec).create_repo("/some-org/app", default_branch="main", files={"f": "x"})
+    assert rec.requests[-1].method == "DELETE"  # the stray repo was cleaned up
+
+
 def test_vcs_client_builds_github_from_gitserver():
     from krci_testkit.clients import vcs_client
     from krci_testkit.models import GitServer

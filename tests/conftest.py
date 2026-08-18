@@ -11,17 +11,18 @@ from krci_testkit.config import KrciConfig, load_config
 from krci_testkit.git_servers import connected_git_server
 from krci_testkit.models import Codebase, GitServer, git_url_path_of
 from krci_testkit.reporting import reportportal_reachable
+from krci_testkit.scaffolds import template_files
 from krci_testkit.waits import Timeouts, timeout_knobs
 from tests.test_data.codebase_data import CodebaseTestData
 from tests.utils.cdpipeline_utils import CDPipelineUtils
-from tests.utils.codebase_utils import CodebaseUtils
+from tests.utils.codebase_utils import CodebaseUtils, derive_git_url_path
 from tests.utils.pipelinerun_utils import PipelineRuns
 
 log = logging.getLogger(__name__)
 
 # Published so each suite's conftest can annotate the factory it consumes.
 OwnedCodebase = Callable[[CodebaseTestData], Codebase]
-OwnedImportedCodebase = Callable[[CodebaseTestData, Callable[[str], CodebaseTestData]], Codebase]
+OwnedImportedCodebase = Callable[[str, CodebaseTestData], Codebase]
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
@@ -250,35 +251,39 @@ def owned_imported_codebase(
     request: pytest.FixtureRequest,
     codebase_utils: CodebaseUtils,
     vcs: VCSProvider,
+    cfg: KrciConfig,
     _claimed_names: dict[str, str],
 ) -> Iterator[OwnedImportedCodebase]:
-    """Factory for the seed-then-import path: a create-strategy codebase seeds the
-    repo, its CR is deleted (the repo survives), and an import-strategy codebase
-    onboards the surviving repo.
+    """Factory for the real import user-flow: an EXISTING repo with real content is
+    onboarded. The repo is seeded on the GitServer from a pointed public source repo
+    through the provider API (content of the source's HEAD, one initial commit — no
+    git, no SSH), so the platform played no part in shaping it.
 
-        codebase = owned_imported_codebase(seed_data, lambda path: import_data(path))
+        codebase = owned_imported_codebase(stack.template_repo_url, import_data)
 
-    import_data_factory takes the seed's gitUrlPath and returns the import
-    CodebaseTestData. Same safety-net teardown contract as owned_codebase."""
+    import_data.git_url_path names the repo to seed and import (None derives
+    /{git_group}/{name}, matching the CR spec derivation). Same safety-net teardown
+    contract as owned_codebase."""
     created: list[tuple[str, str]] = []
 
-    def _create(
-        seed: CodebaseTestData,
-        import_data_factory: Callable[[str], CodebaseTestData],
-    ) -> Codebase:
-        _claim(_claimed_names, seed.name, request.node.nodeid)
-        seeded = codebase_utils.create_codebase(seed)
-        source_path = git_url_path_of(seeded)
-        codebase_utils.delete_codebase(seed.name)
-        codebase_utils.wait_deleted(seed.name)
-        data = import_data_factory(source_path)
-        if data.name != seed.name:  # re-import under the seed's name is the norm
-            _claim(_claimed_names, data.name, request.node.nodeid)
-        codebase = codebase_utils.create_codebase(data)
-        created.append((data.name, source_path))
-        return codebase
+    def _create(source_url: str, data: CodebaseTestData) -> Codebase:
+        _claim(_claimed_names, data.name, request.node.nodeid)
+        repo_path = derive_git_url_path(data, codebase_utils.git_group)
+        # Registered BEFORE anything exists: create_repo is itself several calls
+        # (create, then push content), so a failure at any point must not leak a
+        # half-made repo. Teardown tolerates targets that never came to be.
+        created.append((data.name, repo_path))
+        vcs.create_repo(
+            repo_path,
+            default_branch=data.default_branch,
+            files=template_files(
+                source_url,
+                token=cfg.github_token.get_secret_value() if cfg.github_token else None,
+            ),
+        )
+        return codebase_utils.create_codebase(data)
 
     yield _create
-    for name, source_path in reversed(created):
+    for name, repo_path in reversed(created):
         codebase_utils.delete_codebase(name)
-        vcs.delete_repo(source_path)
+        vcs.delete_repo(repo_path)

@@ -207,6 +207,28 @@ def test_bitbucket_client_satisfies_protocol():
     assert isinstance(_client(Recorder({})), VCSProvider)
 
 
+def test_create_repo_creates_then_commits_initial_content():
+    repo = "/2.0/repositories/grp/app"
+    rec = Recorder(
+        {
+            ("POST", repo): [(200, {"full_name": "grp/app"})],
+            ("POST", f"{repo}/src"): [(201, None)],
+        }
+    )
+    _client(rec).create_repo("/grp/app", default_branch="main", files={"go.mod": "module app\n"})
+    assert json.loads(rec.requests[0].content) == {"scm": "git", "is_private": True}
+    form = rec.requests[1].content.decode()
+    assert "branch=main" in form
+    assert "message=Initial+commit" in form
+
+
+def test_create_repo_rejects_reserved_src_field_collision():
+    rec = Recorder({})
+    with pytest.raises(ValueError, match="branch"):
+        _client(rec).create_repo("/grp/app", default_branch="main", files={"branch": "x"})
+    assert rec.requests == []  # refused before any HTTP call
+
+
 def test_vcs_client_builds_bitbucket_from_gitserver():
     from krci_testkit.clients import vcs_client
     from krci_testkit.models import GitServer

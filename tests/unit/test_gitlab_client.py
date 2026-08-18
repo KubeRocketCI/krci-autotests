@@ -111,6 +111,33 @@ def test_gitlab_client_satisfies_protocol():
     assert isinstance(_client(Recorder({})), VCSProvider)
 
 
+def test_create_repo_resolves_namespace_and_commits_files():
+    rec = Recorder(
+        {
+            ("GET", "/api/v4/namespaces"): [
+                (200, [{"id": 7, "full_path": "grp"}, {"id": 8, "full_path": "grp-other"}])
+            ],
+            ("POST", "/api/v4/projects"): [(201, {"id": 42})],
+            ("POST", "/api/v4/projects/grp/app/repository/commits"): [(201, {"id": "sha"})],
+        }
+    )
+    _client(rec).create_repo("/grp/app", default_branch="main", files={"go.mod": "module app\n"})
+    create_body = json.loads(rec.requests[1].content)
+    assert create_body["path"] == "app"
+    assert create_body["namespace_id"] == 7  # the exact full_path match, not the substring one
+    commit_body = json.loads(rec.requests[2].content)
+    assert commit_body["branch"] == "main"
+    assert commit_body["actions"] == [
+        {"action": "create", "file_path": "go.mod", "content": "module app\n"}
+    ]
+
+
+def test_create_repo_rejects_unknown_namespace_by_name():
+    rec = Recorder({("GET", "/api/v4/namespaces"): [(200, [{"id": 8, "full_path": "grp-other"}])]})
+    with pytest.raises(ValueError, match="'grp'"):
+        _client(rec).create_repo("/grp/app", default_branch="main", files={"f": "x"})
+
+
 def test_comment_change_posts_note():
     proj = "/api/v4/projects/grp/app"  # httpx decodes %2F in url.path
     rec = Recorder({("POST", f"{proj}/merge_requests/7/notes"): [(201, {"id": 1})]})
