@@ -5,7 +5,7 @@ import pytest
 from krci_testkit.clients import VCSProvider
 from krci_testkit.clusters import Cluster
 from krci_testkit.waits import Timeouts
-from tests.test_data.codebase_data import go_application, smoke_change
+from tests.test_data.codebase_data import GO_GIN, created_codebase, smoke_change
 from tests.test_data.deploy_data import auto_pipeline
 from tests.utils.cdpipeline_utils import CDPipelineUtils
 from tests.utils.codebase_utils import CodebaseUtils
@@ -35,7 +35,7 @@ def auto_deploy_setup(
         cd_utils,
         cluster,
         timeouts,
-        data=go_application(prefix="ago"),  # distinct from the shared built_codebase's "go"
+        data=created_codebase(GO_GIN, "ago"),  # distinct from the shared built_codebase's "go"
         pipeline_factory=auto_pipeline,
     )
 

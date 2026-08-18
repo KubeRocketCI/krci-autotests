@@ -209,7 +209,7 @@ def _claim(claimed: dict[str, str], name: str, owner: str) -> None:
         raise ValueError(
             f"codebase name '{name}' was already created in this session by {previous}. "
             "Two scenarios are using the same unique_name() prefix — give this one "
-            "its own prefix, e.g. helm_pipeline_library(prefix='xyz')."
+            "its own prefix, e.g. created_codebase(HELM_LIBRARY, 'xyz')."
         )
     claimed[name] = owner
 
@@ -224,7 +224,7 @@ def owned_codebase(
     """Factory: create codebases this test owns, torn down in reverse order.
 
     Call it with the test-data factory the scenario needs:
-        codebase = owned_codebase(helm_pipeline_library(prefix="brch"))
+        codebase = owned_codebase(created_codebase(HELM_LIBRARY, "brch"))
 
     Scenarios declare their own data instead of the root conftest growing one
     bespoke fixture per scenario. Teardown is an assertion-free SAFETY NET for the

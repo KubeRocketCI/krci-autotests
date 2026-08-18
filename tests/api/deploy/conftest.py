@@ -12,7 +12,12 @@ from krci_testkit.clients import VCSProvider
 from krci_testkit.clusters import Cluster
 from krci_testkit.models import Codebase, git_url_path_of
 from krci_testkit.waits import Timeouts
-from tests.test_data.codebase_data import CodebaseTestData, go_application, smoke_change
+from tests.test_data.codebase_data import (
+    GO_GIN,
+    CodebaseTestData,
+    created_codebase,
+    smoke_change,
+)
 from tests.test_data.deploy_data import CDPipelineTestData, manual_pipeline, promote_pipeline
 from tests.utils.cdpipeline_utils import CDPipelineUtils
 from tests.utils.codebase_utils import CodebaseUtils
@@ -36,7 +41,7 @@ def built_codebase(
     cluster: Cluster,
     timeouts: Timeouts,
 ) -> Generator[BuiltCodebase]:
-    data = go_application()
+    data = created_codebase(GO_GIN, "go")
     created = codebase_utils.create_codebase(data)
     submit_and_verify_change(vcs, pipeline_runs, created, smoke_change())
     entry = wait_image_entry(cluster, timeouts, data.name, data.default_branch)

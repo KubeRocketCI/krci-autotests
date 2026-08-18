@@ -8,13 +8,16 @@ import pytest
 
 from krci_testkit.clients import VCSProvider
 from krci_testkit.clusters import Cluster
+from krci_testkit.platform import VersioningType
 from krci_testkit.waits import Timeouts
 from tests.conftest import OwnedCodebase, OwnedImportedCodebase
 from tests.test_data.codebase_data import (
-    cloned_semver_helm_library,
-    python_fastapi_application,
-    python_fastapi_imported,
-    semver_go_application,
+    GO_GIN,
+    HELM_LIBRARY,
+    PY_FASTAPI,
+    cloned_codebase,
+    created_codebase,
+    imported_codebase,
 )
 from tests.test_data.deploy_data import CDPipelineTestData, journey_pipeline
 from tests.utils.cdpipeline_utils import CDPipelineUtils
@@ -25,15 +28,17 @@ from tests.utils.deploy_utils import CodebaseWithCd, codebase_with_cd_before_bui
 @pytest.fixture
 def cloned_semver_codebase(owned_codebase: OwnedCodebase):
     """Clone-strategy + semver codebase (smoke: one codebase, two dimensions)."""
-    return owned_codebase(cloned_semver_helm_library())
+    return owned_codebase(cloned_codebase(HELM_LIBRARY, "csl", versioning=VersioningType.SEMVER))
 
 
 @pytest.fixture
 def imported_fastapi_codebase(owned_imported_codebase: OwnedImportedCodebase):
     """Import-strategy fastapi application, re-imported UNDER THE SEED'S NAME
     (registry image paths must match an existing GitLab project)."""
-    seed = python_fastapi_application(prefix="pysd")
-    return owned_imported_codebase(seed, lambda path: python_fastapi_imported(path, name=seed.name))
+    seed = created_codebase(PY_FASTAPI, "pysd")
+    return owned_imported_codebase(
+        seed, lambda path: imported_codebase(PY_FASTAPI, "pysd", path, name=seed.name)
+    )
 
 
 # Published beside the factory that produces it, the way the root conftest
@@ -77,6 +82,7 @@ def smoke_journey_setup(
         cd_utils,
         cluster,
         timeouts,
-        data=semver_go_application(prefix="sgo"),  # distinct prefixes: regression owns "go"/"jgo"
+        # distinct prefixes: regression owns "go"/"jgo"
+        data=created_codebase(GO_GIN, "sgo", versioning=VersioningType.SEMVER),
         pipeline_factory=lambda app, branch: journey_pipeline(app, branch, prefix="sjr"),
     )

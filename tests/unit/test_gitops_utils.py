@@ -3,10 +3,7 @@ payload, and the feature/fastapi test-data shapes."""
 
 from krci_testkit import labels
 from krci_testkit.gitops import GITOPS_SELECTOR
-from tests.test_data.codebase_data import (
-    python_fastapi_application,
-    python_fastapi_imported,
-)
+from tests.test_data.codebase_data import PY_FASTAPI, created_codebase, imported_codebase
 from tests.test_data.deploy_data import feature_pipeline, replica_override_values
 from tests.utils.gitops_utils import gitops_values_path
 
@@ -36,9 +33,9 @@ def test_feature_pipeline_streams_the_feature_branch():
     assert dev.trigger_type == "Manual"
 
 
-def test_fastapi_factories_share_the_enabled_python_triple():
-    created = python_fastapi_application()
-    imported = python_fastapi_imported("/group/seed", name="seed")
+def test_both_strategies_carry_the_same_stack():
+    created = created_codebase(PY_FASTAPI, "py")
+    imported = imported_codebase(PY_FASTAPI, "py", "/group/seed", name="seed")
     for data in (created, imported):
         assert (data.lang, data.framework, data.build_tool) == ("python", "fastapi", "python")
     assert created.strategy == "create"

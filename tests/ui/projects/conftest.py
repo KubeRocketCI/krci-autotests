@@ -4,10 +4,10 @@ shortcut (CR), never through portal forms."""
 import pytest
 
 from tests.conftest import OwnedCodebase
-from tests.test_data.codebase_data import helm_pipeline_library
+from tests.test_data.codebase_data import HELM_LIBRARY, created_codebase
 
 
 @pytest.fixture
 def codebase(owned_codebase: OwnedCodebase):
-    """A ready codebase for the Projects list to show (helm triple, fast build)."""
-    return owned_codebase(helm_pipeline_library(prefix="uipj"))
+    """A ready codebase for the Projects list to show (helm stack, fast build)."""
+    return owned_codebase(created_codebase(HELM_LIBRARY, "uipj"))
