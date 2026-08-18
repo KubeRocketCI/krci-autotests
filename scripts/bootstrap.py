@@ -65,7 +65,6 @@ def _gitops_spec(cfg: KrciConfig, *, adopt_existing_repo: bool) -> dict:
 
 def _repo_exists(cfg: KrciConfig, cluster: Cluster) -> bool:
     git_server = connected_git_server(cluster, cfg.git_server)
-    assert git_server.spec is not None, f"GitServer/{name_of(git_server)} has no spec"
     client = vcs_client(
         git_server, cluster.get_secret(git_server.spec.nameSshKeySecret), verify=cfg.httpx_verify
     )

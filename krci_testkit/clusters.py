@@ -8,13 +8,20 @@ from typing import TypeVar, cast
 
 import kr8s
 from kr8s.objects import APIObject, Namespace, Secret, new_class, object_from_spec
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from krci_testkit.config import KrciConfig
-from krci_testkit.errors import AlreadyExists, NotFound
+from krci_testkit.errors import AlreadyExists, Malformed, NotFound
 from krci_testkit.models import GVK, GitServer
 
-__all__ = ["AlreadyExists", "Cluster", "NotFound", "connected_git_server", "validate_manifest"]
+__all__ = [
+    "AlreadyExists",
+    "Cluster",
+    "Malformed",
+    "NotFound",
+    "connected_git_server",
+    "validate_manifest",
+]
 
 # Characters that carry meaning inside a label selector expression.
 _SELECTOR_META = frozenset(",=")
@@ -28,6 +35,17 @@ def validate_manifest(model_cls: type, manifest: dict) -> None:
     field. Generated models ignore unknown keys, so this cannot catch a
     misspelled optional key — the API-server validation remains the backstop."""
     model_cls.model_validate(manifest)
+
+
+def _parse[M: BaseModel](model_cls: type[M], raw: dict) -> M:
+    """Every read goes through here so a malformed object names itself: pydantic
+    reports the offending field but not which resource carried it, and a run that
+    reads many objects of one kind cannot act on that alone."""
+    try:
+        return model_cls.model_validate(raw)
+    except ValidationError as exc:
+        name = raw.get("metadata", {}).get("name", "?")
+        raise Malformed(f"{model_cls.__name__}/{name}: {exc}") from exc
 
 
 class Cluster:
@@ -143,7 +161,7 @@ class Cluster:
         return obj.raw
 
     def get(self, model_cls: type[_M], name: str) -> _M:
-        return model_cls.model_validate(self.get_raw(model_cls, name))
+        return _parse(model_cls, self.get_raw(model_cls, name))
 
     def delete(self, model_cls: type[BaseModel], name: str, *, ignore_missing: bool = True) -> None:
         try:
@@ -189,7 +207,7 @@ class Cluster:
             "list[APIObject]",
             list(self._api.get(gvk.plural, namespace=self.namespace, label_selector=selector)),
         )
-        return [model_cls.model_validate(obj.raw) for obj in objs]
+        return [_parse(model_cls, obj.raw) for obj in objs]
 
     def create_from_manifest(self, manifest: dict) -> dict:
         """Create a resource from a full manifest (e.g. a PipelineRun rendered from a

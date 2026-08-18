@@ -4,7 +4,7 @@
 schemas:
   - kind: Codebase
     module: codebase
-    type: crd  # extract spec.versions[0].schema.openAPIV3Schema
+    type: crd  # openAPIV3Schema of the spec.versions entry named by api_version
     url: https://raw.githubusercontent.com/epam/edp-codebase-operator/v2.35.0/deploy-templates/crds/v2.edp.epam.com_codebases.yaml
     api_version: v2.edp.epam.com/v1
   - kind: CodebaseBranch
