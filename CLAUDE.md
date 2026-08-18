@@ -18,6 +18,9 @@ tests/* → tests/utils + tests/ui/pageobjects → krci_testkit → external lib
   with `models.spec_dict` (exclude_unset + exclude_none: only declared fields go on the wire).
 - Every test owns uniquely-named resources via `krci_testkit.naming.unique_name`; cleanup via
   yield fixtures only. Shared state is read-only; mutable shared state is banned.
+- WHAT a codebase is built from is a `Stack` in `tests/test_data/stacks.py` (the platform's
+  pipeline selector); HOW it is onboarded is one of the three strategy builders in
+  `codebase_data`. Adding a language is one `CATALOG` entry, never a new factory.
 - Codebases come from the `owned_codebase` / `owned_imported_codebase` FACTORY fixtures in
   the root conftest; a scenario declares its own test data in the conftest of the suite that
   owns it. Never add a scenario-specific fixture to the root conftest. Every scenario needs
@@ -57,9 +60,16 @@ tests/* → tests/utils + tests/ui/pageobjects → krci_testkit → external lib
   narration. A comment exists only for a genuinely unobvious WHY the code cannot express;
   match the file's existing comment density (for plain dataclass fields that is usually
   none). Provenance lives in the commit message, not the code.
-- Markers: SURFACE is `api`/`ui` (a mixed test carries the marker of its dominant assertion
-  surface); SUITE is `smoke`/`regression`/`journey`; plus `serial` for genuinely serial tests.
-  Every marker is registered in `pyproject.toml` — an unregistered one silently selects nothing.
+- Markers describe a TEST's own properties, never its suite membership: SURFACE is
+  `api`/`ui` (a mixed test carries the marker of its dominant assertion surface), plus
+  `serial` for genuinely serial tests. Every marker is registered in `pyproject.toml` —
+  an unregistered one silently selects nothing.
+- SUITES are data, not markers: `suites.yaml` maps a name to a list of pytest targets
+  (directory, file, or one parametrized case). A test declares nothing, so it can belong
+  to any number of suites and a new suite costs no test edits. Run one with
+  `make test SUITE=<name>`. The trade is that a test no suite names would silently never
+  run — `scripts/suite.py check` (part of `make lint`) fails on an orphan test and on an
+  entry left behind by a rename.
 - Test naming: CRUD chains are `test_<subject>_[<variant>_]lifecycle`
   (`test_codebase_create_lifecycle`, `test_feature_branch_lifecycle`); single-behavior
   tests read as trigger→effect (`test_recheck_comment_reruns_review`); deploy flows are
@@ -83,6 +93,6 @@ tests/* → tests/utils + tests/ui/pageobjects → krci_testkit → external lib
 
 ## Workflow
 
-`make install` → `make preflight` → `make bootstrap` → `make test-smoke`. Lint gate: `make lint` (ruff +
-import-linter) must pass before commit. Writing tests: use the `api-test-writer` /
+`make install` → `make preflight` → `make bootstrap` → `make test SUITE=smoke`. Lint gate:
+`make lint` (ruff + import-linter + pyright + suite check) must pass before commit. Writing tests: use the `api-test-writer` /
 `ui-test-writer` skills.

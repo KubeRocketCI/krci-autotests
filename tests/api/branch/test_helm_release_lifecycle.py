@@ -4,12 +4,11 @@ import pytest
 
 from krci_testkit.clients import VCSProvider
 from krci_testkit.models import Codebase, name_of
-from tests.test_data.codebase_data import release_branch, smoke_change
+from tests.test_data.codebase_data import release_branch, simple_change
 from tests.utils.codebase_utils import CodebaseUtils
 from tests.utils.pipelinerun_utils import PipelineRuns, submit_and_verify_change
 
 
-@pytest.mark.smoke
 @pytest.mark.api
 def test_helm_release_lifecycle(
     cloned_semver_codebase: Codebase,
@@ -47,7 +46,7 @@ def test_helm_release_lifecycle(
         vcs,
         pipeline_runs,
         cloned_semver_codebase,
-        smoke_change(prefix="srl"),
+        simple_change(prefix="srl"),
         branch=branch.branch_name,
     )
     codebase_utils.delete_branch(name, branch.branch_name)

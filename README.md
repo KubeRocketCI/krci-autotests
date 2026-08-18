@@ -41,7 +41,7 @@ make unit-tests                   # offline check of the testkit — no cluster 
 cp .env.example .env              # then fill the four values below
 make preflight                    # verify the cluster, GitServer, VCS auth and RBAC
 make bootstrap                    # onboard the gitops codebase — once per environment
-make test-smoke-api               # ~10 min against the cluster
+make test SUITE=smoke-api         # ~10 min against the cluster
 ```
 
 The four values `.env` must carry for an API run:
@@ -53,7 +53,7 @@ KRCI_GIT_GROUP=      # VCS group/org the suite creates repos in, e.g. mygroup
 KRCI_KUBE_CONTEXT=   # only if the cluster is not your current kubeconfig context
 ```
 
-Add `KRCI_PORTAL_URL` and `KRCI_PORTAL_TOKEN` for the UI suite (`make test-smoke-ui`); an
+Add `KRCI_PORTAL_URL` and `KRCI_PORTAL_TOKEN` for the UI suite (`make test SUITE=smoke-ui`); an
 API-only run needs neither. Every other variable has a working default — see
 [Configuration](#configuration).
 
@@ -129,11 +129,13 @@ make install          # uv sync (installs Python 3.14 automatically) + playwrigh
 make preflight        # verify the target environment before any test
 make bootstrap        # onboard environment prerequisites (gitops codebase), once per env
 make unit-tests       # offline tests of the testkit itself (no cluster)
-make test-smoke       # full smoke (API + UI)
-make test-smoke-api   # API smoke only
-make test-smoke-ui    # UI smoke only (headless)
-make test-regression  # core regression (branch CRUD + deploy flows), single worker
-make test-journey     # full-chain provider-certification journey
+make suites                    # the defined suites and their case counts
+make test SUITE=smoke          # full smoke (API + UI)
+make test SUITE=smoke-api      # API smoke only
+make test SUITE=smoke-ui       # UI smoke only (headless)
+make test SUITE=regression     # core regression (onboarding, branch CRUD, deploy flows)
+make test SUITE=stack-matrix   # onboarding for every stack in the catalog (long)
+make test SUITE=journey     # full-chain provider-certification journey
 make scenarios        # print the human-readable Given/When/Then catalog
 make lint             # ruff + import-linter layering gate
 ```
@@ -153,8 +155,8 @@ Multi-GitServer clusters — one process per provider; run-ID naming keeps paral
 collision-free:
 
 ```bash
-KRCI_GIT_SERVER=gitlab KRCI_GIT_GROUP=krci  make test-regression &
-KRCI_GIT_SERVER=github KRCI_GIT_GROUP=myorg make test-regression &
+KRCI_GIT_SERVER=gitlab KRCI_GIT_GROUP=krci  make test SUITE=regression &
+KRCI_GIT_SERVER=github KRCI_GIT_GROUP=myorg make test SUITE=regression &
 ```
 
 Smoke defaults to the platform's lightest build (helm library: lint + template) for fast
@@ -169,7 +171,7 @@ uv run pytest tests/ui -m smoke -n 0 --headed --slowmo 300
 ```
 
 ReportPortal is optional: define `RP_ENDPOINT`, `RP_PROJECT`, `RP_API_KEY` in `.env` and any
-`make test-*` target publishes a launch. Without them the suite runs identically with console
+`make test SUITE=...` run publishes a launch. Without them the suite runs identically with console
 output only.
 
 ## Layout

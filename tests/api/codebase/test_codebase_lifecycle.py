@@ -2,20 +2,29 @@ import pytest
 
 from krci_testkit.clients import VCSProvider
 from krci_testkit.models import Codebase, name_of
-from tests.test_data.codebase_data import smoke_change
+from tests.conftest import OwnedCodebase
+from tests.test_data.codebase_data import created_codebase, simple_change
+from tests.test_data.stacks import CATALOG, Stack
 from tests.utils.codebase_utils import CodebaseUtils
 from tests.utils.pipelinerun_utils import PipelineRuns, submit_and_verify_change
 
 
-@pytest.mark.regression
 @pytest.mark.api
+@pytest.mark.parametrize("stack", CATALOG.values(), ids=lambda stack: stack.key)
 def test_codebase_create_lifecycle(
-    codebase: Codebase, codebase_utils: CodebaseUtils, pipeline_runs: PipelineRuns, vcs: VCSProvider
+    stack: Stack,
+    owned_codebase: OwnedCodebase,
+    codebase_utils: CodebaseUtils,
+    pipeline_runs: PipelineRuns,
+    vcs: VCSProvider,
 ):
-    """Codebase lifecycle through the platform's real trigger path.
+    """Codebase lifecycle through the platform's real trigger path, per stack.
+
+    One case per catalog stack, so a language added to the catalog is covered
+    without new test code. A suite names the cases it runs; nothing here decides.
 
     Given a KRCI cluster with a connected GitServer
-    When  a Codebase is created via CR (create strategy, unique run-ID name)
+    When  a Codebase is created via CR for this stack (create strategy)
     Then  the repo is provisioned; Codebase + default branch become ready
     When  a change is submitted for review in the VCS (branch + commit + change request)
     Then  the platform renders a review PipelineRun via its own webhook/trigger
@@ -27,15 +36,19 @@ def test_codebase_create_lifecycle(
 
     Not asserted: the pipelineUrl deep-link param (environment-computed default
     that does not track the portal ingress everywhere); VCS repo removal
-    (teardown deletes it best-effort — the operator never does).
+    (teardown deletes it best-effort — the operator never does); which pipeline
+    the platform picked (a green run for the stack is the evidence).
+
+    A stack whose pipelines the target cluster does not serve fails here — the
+    platform's configuration is the finding, not something the suite arranges.
     """
+    codebase = owned_codebase(created_codebase(stack, f"cl-{stack.slug}"))
     name = name_of(codebase)
-    submit_and_verify_change(vcs, pipeline_runs, codebase, smoke_change())
+    submit_and_verify_change(vcs, pipeline_runs, codebase, simple_change(prefix=f"cc-{stack.slug}"))
     codebase_utils.delete_codebase(name)
     codebase_utils.wait_deleted(name)
 
 
-@pytest.mark.regression
 @pytest.mark.api
 def test_codebase_import_lifecycle(
     imported_codebase: Codebase,
@@ -57,12 +70,11 @@ def test_codebase_import_lifecycle(
     teardown).
     """
     name = name_of(imported_codebase)
-    submit_and_verify_change(vcs, pipeline_runs, imported_codebase, smoke_change())
+    submit_and_verify_change(vcs, pipeline_runs, imported_codebase, simple_change())
     codebase_utils.delete_codebase(name)
     codebase_utils.wait_deleted(name)
 
 
-@pytest.mark.regression
 @pytest.mark.api
 def test_codebase_clone_lifecycle(
     cloned_codebase: Codebase,
@@ -89,6 +101,6 @@ def test_codebase_clone_lifecycle(
     branch steps, owned by the branch lifecycle tests.
     """
     name = name_of(cloned_codebase)
-    submit_and_verify_change(vcs, pipeline_runs, cloned_codebase, smoke_change())
+    submit_and_verify_change(vcs, pipeline_runs, cloned_codebase, simple_change())
     codebase_utils.delete_codebase(name)
     codebase_utils.wait_deleted(name)

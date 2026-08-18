@@ -5,7 +5,7 @@ import pytest
 from krci_testkit.clients import VCSProvider
 from krci_testkit.clusters import Cluster
 from krci_testkit.waits import Timeouts
-from tests.test_data.codebase_data import created_codebase, smoke_change
+from tests.test_data.codebase_data import created_codebase, simple_change
 from tests.test_data.deploy_data import auto_pipeline
 from tests.test_data.stacks import GO_GIN
 from tests.utils.cdpipeline_utils import CDPipelineUtils
@@ -41,7 +41,6 @@ def auto_deploy_setup(
     )
 
 
-@pytest.mark.regression
 @pytest.mark.api
 def test_auto_deploy(
     auto_deploy_setup: CodebaseWithCd,
@@ -74,7 +73,7 @@ def test_auto_deploy(
     stage = cd.stages[0]
     labels = deploy_labels(cd.name)
     seen = pipeline_runs.baseline_for(labels)
-    submit_and_verify_change(vcs, pipeline_runs, created, smoke_change())
+    submit_and_verify_change(vcs, pipeline_runs, created, simple_change())
     tag = wait_image_tag(cluster, timeouts, data.name, data.default_branch)
     pipeline_runs.wait_success_for(
         labels,

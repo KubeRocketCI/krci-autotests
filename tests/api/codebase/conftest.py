@@ -17,12 +17,6 @@ from tests.test_data.stacks import HELM_LIBRARY
 
 
 @pytest.fixture
-def codebase(owned_codebase: OwnedCodebase):
-    """A ready codebase (helm stack, default versioning)."""
-    return owned_codebase(created_codebase_data(HELM_LIBRARY, "helm"))
-
-
-@pytest.fixture
 def cloned_codebase(owned_codebase: OwnedCodebase):
     """A ready clone-strategy codebase (public template repo as source)."""
     return owned_codebase(cloned_codebase_data(HELM_LIBRARY, "cln"))

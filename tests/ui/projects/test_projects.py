@@ -4,7 +4,6 @@ from krci_testkit.models import Codebase, name_of
 from tests.ui.pageobjects.overview_page import OverviewPage
 
 
-@pytest.mark.smoke
 @pytest.mark.ui
 def test_created_codebase_listed(codebase: Codebase, overview: OverviewPage):
     """An API-created codebase appears in the portal Projects list.

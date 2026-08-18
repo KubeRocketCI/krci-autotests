@@ -3,7 +3,7 @@ import pytest
 from krci_testkit.clients import MergeStrategy, VCSProvider
 from krci_testkit.models import Codebase, git_url_path_of
 from krci_testkit.platform import CIStatus
-from tests.test_data.codebase_data import smoke_change
+from tests.test_data.codebase_data import simple_change
 from tests.utils.pipelinerun_utils import (
     PipelineRuns,
     merge_and_wait_build,
@@ -11,7 +11,6 @@ from tests.utils.pipelinerun_utils import (
 )
 
 
-@pytest.mark.regression
 @pytest.mark.api
 def test_squash_merge_triggers_build(
     squash_codebase: Codebase, pipeline_runs: PipelineRuns, vcs: VCSProvider
@@ -33,7 +32,7 @@ def test_squash_merge_triggers_build(
     (provider-internal); the status's context name and deep-link URL
     (chart-version copy / environment-fragile pipelineUrl).
     """
-    change_data = smoke_change(prefix="sqch", merge_strategy=MergeStrategy.SQUASH)
+    change_data = simple_change(prefix="sqch", merge_strategy=MergeStrategy.SQUASH)
     change = submit_change_and_wait_review(vcs, pipeline_runs, squash_codebase, change_data)
     statuses = vcs.change_statuses(git_url_path_of(squash_codebase), change)
     assert any(s.state is CIStatus.SUCCESS for s in statuses), f"no success CI status: {statuses}"

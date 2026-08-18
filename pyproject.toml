@@ -46,18 +46,18 @@ log_cli = true
 log_cli_level = "INFO"
 log_cli_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 log_cli_date_format = "%Y-%m-%d %H:%M:%S"
+# Markers describe a TEST's own properties. Suite membership is not one of them:
+# it lives in suites.yaml, so one test can belong to any number of suites without
+# declaring anything (see scripts/suite.py).
 markers = [
-    "smoke: fast confidence suite over the core platform path",
-    "regression: core regression suite",
     "api: asserts primarily through CRDs/API",
     "ui: asserts primarily through the browser",
     "serial: must not run under xdist parallelism",
-    "journey: full-chain provider-certification journey",
 ]
 filterwarnings = [
     "ignore::urllib3.exceptions.InsecureRequestWarning",
 ]
-# Launch name is suite-neutral: one ini cannot know which marker selection ran.
+# Launch name is suite-neutral: one ini cannot know which suite ran.
 # Tag a run from CI instead, e.g. -o rp_launch_attributes="suite:smoke".
 rp_launch = "krci-autotests"
 rp_verify_ssl = true

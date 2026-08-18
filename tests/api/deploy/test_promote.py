@@ -9,7 +9,6 @@ from tests.utils.deploy_utils import IMAGE_DIGEST_PATTERN, apps_payload, render_
 from tests.utils.pipelinerun_utils import PipelineRuns, deploy_labels
 
 
-@pytest.mark.regression
 @pytest.mark.api
 def test_promote_between_stages(
     built_codebase: BuiltCodebase,

@@ -3,11 +3,10 @@ import pytest
 from krci_testkit.clients import VCSProvider
 from krci_testkit.models import Codebase, git_url_path_of, name_of
 from krci_testkit.platform import PipelineType
-from tests.test_data.codebase_data import recheck_comment, smoke_change
+from tests.test_data.codebase_data import recheck_comment, simple_change
 from tests.utils.pipelinerun_utils import PipelineRuns, submit_change_and_wait_review
 
 
-@pytest.mark.regression
 @pytest.mark.api
 def test_recheck_comment_reruns_review(
     recheck_codebase: Codebase, pipeline_runs: PipelineRuns, vcs: VCSProvider
@@ -27,7 +26,7 @@ def test_recheck_comment_reruns_review(
     platform behavior).
     """
     name = name_of(recheck_codebase)
-    change = submit_change_and_wait_review(vcs, pipeline_runs, recheck_codebase, smoke_change())
+    change = submit_change_and_wait_review(vcs, pipeline_runs, recheck_codebase, simple_change())
     rerun_seen = pipeline_runs.baseline(name, PipelineType.REVIEW)
     vcs.comment_change(git_url_path_of(recheck_codebase), change, recheck_comment())
     pipeline_runs.wait_success(name, PipelineType.REVIEW, since=rerun_seen)

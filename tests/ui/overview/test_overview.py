@@ -3,7 +3,6 @@ import pytest
 from tests.ui.pageobjects.overview_page import OverviewPage
 
 
-@pytest.mark.smoke
 @pytest.mark.ui
 def test_overview_page_loads(overview: OverviewPage):
     """Overview renders for an authenticated session.

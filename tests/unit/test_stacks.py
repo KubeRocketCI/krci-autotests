@@ -14,17 +14,22 @@ import pytest
 
 from krci_testkit.naming import unique_name
 from tests.test_data.codebase_data import created_codebase
-from tests.test_data.stacks import CATALOG, MAX_SLUG, Stack, Tier, by_tier, deployable
+from tests.test_data.stacks import CATALOG, MAX_SLUG, Stack, deployable
 
 _DNS1123 = re.compile(r"[a-z0-9]([a-z0-9-]*[a-z0-9])?$")
 
-# The portal's create form offers 62 lang/framework/buildTool/type combinations.
-# The gitops system codebase is deliberately absent: scripts/bootstrap.py owns it.
-_PORTAL_COMBINATIONS = 62
+# Size the catalog was last reconciled against the portal's create-form mapping and
+# the pipelines edp-tekton ships. The gitops system codebase is deliberately absent:
+# scripts/bootstrap.py owns it.
+_RECONCILED_SIZE = 62
 
 
-def test_catalog_covers_the_portals_whole_combination_space():
-    assert len(CATALOG) == _PORTAL_COMBINATIONS
+def test_catalog_size_is_pinned():
+    """A change detector, NOT proof of coverage: this counts entries and cannot tell
+    a correct stack from a wrong one substituted for it. Nothing in this repository
+    holds the platform's combination list in machine-readable form, so a changed
+    count means the catalog needs re-reconciling against the portal and the chart."""
+    assert len(CATALOG) == _RECONCILED_SIZE
 
 
 def test_no_stack_onboards_the_gitops_system_codebase():
@@ -89,15 +94,6 @@ def test_stacks_sharing_a_pipeline_stay_distinct_entries():
 def test_only_applications_are_deployable():
     """A CD stage deploys an image, and only applications produce one."""
     assert {s.codebase_type for s in deployable(CATALOG).values()} == {"application"}
-
-
-def test_every_tier_is_populated_and_smoke_stays_small():
-    """A scenario parametrizes over a tier because every stack costs a real build:
-    the smoke tier has to stay something a smoke run can actually afford."""
-    for tier in Tier:
-        assert by_tier(tier), f"tier {tier} has no stacks"
-    assert len(by_tier(Tier.SMOKE)) <= 3
-    assert by_tier(Tier.SMOKE, Tier.REGRESSION, Tier.FULL).keys() == CATALOG.keys()
 
 
 def test_template_repo_url_follows_the_scaffold_naming():

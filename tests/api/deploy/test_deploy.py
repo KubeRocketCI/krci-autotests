@@ -8,7 +8,6 @@ from tests.utils.deploy_utils import apps_payload, render_deploy_run
 from tests.utils.pipelinerun_utils import PipelineRuns, deploy_labels
 
 
-@pytest.mark.regression
 @pytest.mark.api
 def test_manual_deploy(
     built_codebase: BuiltCodebase,

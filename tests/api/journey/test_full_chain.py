@@ -13,7 +13,7 @@ from krci_testkit.clients import VCSProvider
 from krci_testkit.clusters import Cluster
 from krci_testkit.naming import stage_cr_name
 from krci_testkit.waits import Timeouts
-from tests.test_data.codebase_data import created_codebase, smoke_change
+from tests.test_data.codebase_data import created_codebase, simple_change
 from tests.test_data.deploy_data import journey_pipeline
 from tests.test_data.stacks import GO_GIN
 from tests.utils.cdpipeline_utils import CDPipelineUtils
@@ -52,7 +52,6 @@ def journey_setup(
     )
 
 
-@pytest.mark.journey
 @pytest.mark.api
 @pytest.mark.serial
 def test_platform_journey(
@@ -102,7 +101,7 @@ def test_platform_journey(
     dev_seen = pipeline_runs.baseline_for(dev_labels)
     qa_seen = pipeline_runs.baseline_for(qa_labels)
 
-    submit_and_verify_change(vcs, pipeline_runs, created, smoke_change(prefix="jchg"))
+    submit_and_verify_change(vcs, pipeline_runs, created, simple_change(prefix="jchg"))
     tag = wait_image_tag(cluster, timeouts, app, data.default_branch)
 
     pipeline_runs.wait_success_for(

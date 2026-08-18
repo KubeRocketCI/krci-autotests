@@ -13,7 +13,7 @@ from krci_testkit.clients import VCSProvider
 from krci_testkit.clusters import Cluster
 from krci_testkit.naming import stage_cr_name
 from krci_testkit.waits import Timeouts
-from tests.test_data.codebase_data import smoke_change
+from tests.test_data.codebase_data import simple_change
 from tests.test_data.deploy_data import replica_override_values
 from tests.utils.cdpipeline_utils import CDPipelineUtils
 from tests.utils.codebase_utils import CodebaseUtils
@@ -26,14 +26,10 @@ from tests.utils.deploy_utils import (
 from tests.utils.gitops_utils import merge_values_override
 from tests.utils.pipelinerun_utils import PipelineRuns, deploy_labels, submit_and_verify_change
 
-# Mirrors the yield shape of codebase_with_cd_before_build, consumed here via
-# smoke_journey_setup (tests/api/smoke/conftest.py).
 
-
-@pytest.mark.smoke
 @pytest.mark.api
 def test_go_deploy_journey(
-    smoke_journey_setup: CodebaseWithCd,
+    deploy_journey_setup: CodebaseWithCd,
     codebase_utils: CodebaseUtils,
     cd_utils: CDPipelineUtils,
     pipeline_runs: PipelineRuns,
@@ -80,7 +76,7 @@ def test_go_deploy_journey(
     Smoke-scoped sibling of test_platform_journey, adding the gitops polarity
     asserts.
     """
-    created, data, cd = smoke_journey_setup
+    created, data, cd = deploy_journey_setup
     app = data.name
     dev, qa = cd.stages
     dev_labels = deploy_labels(cd.name, stage_cr_name(cd.name, dev.name))
@@ -97,7 +93,7 @@ def test_go_deploy_journey(
         content=replica_override_values(2),
     )
 
-    submit_and_verify_change(vcs, pipeline_runs, created, smoke_change(prefix="sjc"))
+    submit_and_verify_change(vcs, pipeline_runs, created, simple_change(prefix="sjc"))
     tag = wait_image_tag(cluster, timeouts, app, data.default_branch)
 
     pipeline_runs.wait_success_for(

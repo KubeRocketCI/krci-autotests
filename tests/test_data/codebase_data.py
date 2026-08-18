@@ -181,14 +181,16 @@ def release_branch() -> BranchTestData:
     return BranchTestData(branch_name=unique_name("rel"), release=True, version="0.1.0-RC.1")
 
 
-def smoke_change(
+def simple_change(
     prefix: str = "chg", merge_strategy: MergeStrategy = MergeStrategy.MERGE
 ) -> ChangeTestData:
+    """A one-file change: the smallest payload that still drives the real trigger
+    path (review run, merge, build run)."""
     marker = unique_name(prefix)
     return ChangeTestData(
         source_branch=marker,
-        title=f"test: krci-autotests smoke change {marker}",
-        files={f"{marker}.txt": "krci-autotests smoke change\n"},
+        title=f"test: krci-autotests change {marker}",
+        files={f"{marker}.txt": "krci-autotests change\n"},
         merge_strategy=merge_strategy,
     )
 

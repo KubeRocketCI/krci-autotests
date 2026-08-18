@@ -1,0 +1,81 @@
+# Suites are named lists of tests. A suite decides WHAT RUNS; a test never
+# declares which suites it belongs to, so the same test can appear in any number
+# of them. Entries are pytest targets: a directory, a file, or one exact case
+# (parametrized cases are addressed by their id, e.g. a catalog stack key).
+#
+# `parallel` is the xdist worker count for the suite; 0 runs in one process.
+# Tests marked `serial` refuse to run under xdist at all, so a suite that names
+# one must set parallel: 0.
+#
+# scripts/suite.py expands a suite into pytest arguments, verifies every entry
+# still resolves, and reports tests no suite runs (`make lint`).
+
+smoke:
+  description: Fast confidence over the core platform path (API + UI).
+  parallel: 3
+  tests:
+    - tests/api/deploy/test_go_deploy_journey.py
+    - tests/api/branch/test_helm_release_lifecycle.py
+    - tests/api/branch/test_python_feature_lifecycle.py
+    - tests/ui
+
+smoke-api:
+  description: The API half of smoke, for a run with no portal configured.
+  parallel: 3
+  tests:
+    - tests/api/deploy/test_go_deploy_journey.py
+    - tests/api/branch/test_helm_release_lifecycle.py
+    - tests/api/branch/test_python_feature_lifecycle.py
+
+smoke-ui:
+  description: The portal half of smoke.
+  parallel: 0
+  tests:
+    - tests/ui
+
+regression:
+  description: Core regression - onboarding strategies, branch CRUD, CD flows.
+  parallel: 0
+  tests:
+    - tests/api/codebase/test_codebase_lifecycle.py::test_codebase_import_lifecycle
+    - tests/api/codebase/test_codebase_lifecycle.py::test_codebase_clone_lifecycle
+    - tests/api/codebase/test_merge_strategy.py
+    - tests/api/branch/test_branch_lifecycle.py
+    - tests/api/deploy/test_deploy.py
+    - tests/api/deploy/test_autodeploy.py
+    - tests/api/deploy/test_promote.py
+    - tests/api/review/test_recheck.py
+    # One onboarding case per stack the core regression covers.
+    - "tests/api/codebase/test_codebase_lifecycle.py::test_codebase_create_lifecycle[helm-helm-pipeline-lib]"
+    - "tests/api/codebase/test_codebase_lifecycle.py::test_codebase_create_lifecycle[go-go-gin-app]"
+    - "tests/api/codebase/test_codebase_lifecycle.py::test_codebase_create_lifecycle[python-python-fastapi-app]"
+
+journey:
+  description: Full-chain provider certification.
+  parallel: 0
+  tests:
+    - tests/api/journey/test_full_chain.py
+
+stack-matrix:
+  description: Onboarding for every stack in the catalog - the long sweep.
+  parallel: 3
+  tests:
+    - tests/api/codebase/test_codebase_lifecycle.py::test_codebase_create_lifecycle
+
+unit:
+  description: The testkit's own checks - offline, no cluster.
+  parallel: auto
+  tests:
+    - tests/unit
+
+github-smoke:
+  description: Example of a suite composed from cases other suites already run.
+  parallel: 3
+  tests:
+    # reused verbatim from `smoke`
+    - tests/api/branch/test_helm_release_lifecycle.py
+    # reused from `regression`
+    - tests/api/review/test_recheck.py
+    # two stack cases the other suites do not run
+    - "tests/api/codebase/test_codebase_lifecycle.py::test_codebase_create_lifecycle[javascript-pnpm-react-app]"
+    - "tests/api/codebase/test_codebase_lifecycle.py::test_codebase_create_lifecycle[java-maven-java21-app]"

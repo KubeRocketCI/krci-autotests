@@ -6,7 +6,6 @@ from krci_testkit.config import KrciConfig
 from tests.ui.pageobjects.login_page import LoginPage
 
 
-@pytest.mark.smoke
 @pytest.mark.ui
 def test_token_login_opens_overview(anonymous_page: Page, cfg: KrciConfig):
     """The ServiceAccount-token login flow grants portal access.

@@ -2,12 +2,11 @@ import pytest
 
 from krci_testkit.clients import VCSProvider
 from krci_testkit.models import Codebase, name_of
-from tests.test_data.codebase_data import feature_branch, release_branch, smoke_change
+from tests.test_data.codebase_data import feature_branch, release_branch, simple_change
 from tests.utils.codebase_utils import CodebaseUtils
 from tests.utils.pipelinerun_utils import PipelineRuns, submit_and_verify_change
 
 
-@pytest.mark.regression
 @pytest.mark.api
 def test_feature_branch_lifecycle(
     branch_codebase: Codebase,
@@ -34,13 +33,12 @@ def test_feature_branch_lifecycle(
     branch = feature_branch()
     codebase_utils.create_branch(name, branch)
     submit_and_verify_change(
-        vcs, pipeline_runs, branch_codebase, smoke_change(), branch=branch.branch_name
+        vcs, pipeline_runs, branch_codebase, simple_change(), branch=branch.branch_name
     )
     codebase_utils.delete_branch(name, branch.branch_name)
     codebase_utils.wait_branch_deleted(name, branch.branch_name)
 
 
-@pytest.mark.regression
 @pytest.mark.api
 def test_release_branch_lifecycle(
     semver_codebase: Codebase,
@@ -65,7 +63,7 @@ def test_release_branch_lifecycle(
     branch = release_branch()
     codebase_utils.create_branch(name, branch)
     submit_and_verify_change(
-        vcs, pipeline_runs, semver_codebase, smoke_change(), branch=branch.branch_name
+        vcs, pipeline_runs, semver_codebase, simple_change(), branch=branch.branch_name
     )
     codebase_utils.delete_branch(name, branch.branch_name)
     codebase_utils.wait_branch_deleted(name, branch.branch_name)

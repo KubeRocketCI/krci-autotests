@@ -16,7 +16,6 @@ never provision a platform prerequisite.
 """
 
 from dataclasses import dataclass
-from enum import StrEnum
 from typing import Literal
 
 CodebaseType = Literal["application", "library", "autotest", "infrastructure"]
@@ -26,15 +25,6 @@ CodebaseType = Literal["application", "library", "autotest", "infrastructure"]
 MAX_SLUG = 10
 
 _TEMPLATE_REPO_OWNER = "https://github.com/epmd-edp"
-
-
-class Tier(StrEnum):
-    """How widely a stack is exercised. A scenario parametrizes over a tier, never
-    over the whole catalog: every stack costs a real build on the cluster."""
-
-    SMOKE = "smoke"
-    REGRESSION = "regression"
-    FULL = "full"
 
 
 @dataclass(frozen=True)
@@ -47,7 +37,6 @@ class Stack:
     codebase_type: CodebaseType
     # Short, stable name fragment a scenario folds into its unique_name prefix.
     slug: str
-    tier: Tier = Tier.FULL
     # Workload-relative build cost. Effective build wait =
     # krci_timeout_build_success * build_timeout_factor: the run knob knows how fast
     # the CLUSTER is, the stack knows how heavy the WORKLOAD is.
@@ -86,39 +75,39 @@ _STACKS: tuple[Stack, ...] = (
     Stack("cpp", "none", "make", "application", "cnonema"),
     Stack("csharp", "dotnet-3.1", "dotnet", "application", "dotnet3da"),
     Stack("csharp", "dotnet-6.0", "dotnet", "application", "dotnet6da"),
-    Stack("go", "beego", "go", "application", "beegoga", Tier.REGRESSION),
-    Stack("go", "gin", "go", "application", "ginga", Tier.SMOKE),
+    Stack("go", "beego", "go", "application", "beegoga"),
+    Stack("go", "gin", "go", "application", "ginga"),
     Stack("go", "operator-sdk", "go", "application", "operatoga"),
-    Stack("helm", "helm", "helm", "application", "helmha", Tier.REGRESSION),
+    Stack("helm", "helm", "helm", "application", "helmha"),
     Stack("java", "java17", "gradle", "application", "java17ga"),
-    Stack("java", "java21", "gradle", "application", "java21ga", Tier.REGRESSION),
+    Stack("java", "java21", "gradle", "application", "java21ga"),
     Stack("java", "java25", "gradle", "application", "java25ga"),
     Stack("java", "java17", "maven", "application", "java17ma"),
-    Stack("java", "java21", "maven", "application", "java21ma", Tier.REGRESSION),
+    Stack("java", "java21", "maven", "application", "java21ma"),
     Stack("java", "java25", "maven", "application", "java25ma"),
     Stack("javascript", "angular", "npm", "application", "angularna"),
     Stack("javascript", "antora", "npm", "application", "antorana"),
     Stack("javascript", "express", "npm", "application", "expressna"),
     Stack("javascript", "next", "npm", "application", "nextna"),
-    Stack("javascript", "react", "npm", "application", "reactna", Tier.REGRESSION),
+    Stack("javascript", "react", "npm", "application", "reactna"),
     Stack("javascript", "vue", "npm", "application", "vuena"),
     Stack("javascript", "angular", "pnpm", "application", "angularpa"),
     Stack("javascript", "antora", "pnpm", "application", "antorapa"),
     Stack("javascript", "express", "pnpm", "application", "expresspa"),
     Stack("javascript", "next", "pnpm", "application", "nextpa"),
-    Stack("javascript", "react", "pnpm", "application", "reactpa", Tier.REGRESSION),
+    Stack("javascript", "react", "pnpm", "application", "reactpa"),
     Stack("javascript", "vue", "pnpm", "application", "vuepa"),
-    Stack("python", "fastapi", "python", "application", "fastapipa", Tier.SMOKE),
-    Stack("python", "flask", "python", "application", "flaskpa", Tier.REGRESSION),
+    Stack("python", "fastapi", "python", "application", "fastapipa"),
+    Stack("python", "flask", "python", "application", "flaskpa"),
     Stack("python", "python-3.13", "python", "application", "python3pa"),
     # library
-    Stack("container", "docker", "kaniko", "library", "dockerkl", Tier.REGRESSION),
+    Stack("container", "docker", "kaniko", "library", "dockerkl"),
     Stack("csharp", "dotnet-3.1", "dotnet", "library", "dotnet3dl"),
     Stack("csharp", "dotnet-6.0", "dotnet", "library", "dotnet6dl"),
     Stack("groovy-pipeline", "codenarc", "codenarc", "library", "codenarcl"),
-    Stack("hcl", "terraform", "terraform", "library", "terrafotl", Tier.REGRESSION),
-    Stack("helm", "charts", "helm", "library", "chartshl", Tier.REGRESSION),
-    Stack("helm", "pipeline", "helm", "library", "pipelinhl", Tier.SMOKE, 0.5),
+    Stack("hcl", "terraform", "terraform", "library", "terrafotl"),
+    Stack("helm", "charts", "helm", "library", "chartshl"),
+    Stack("helm", "pipeline", "helm", "library", "pipelinhl", 0.5),
     Stack("java", "java17", "gradle", "library", "java17gl"),
     Stack("java", "java21", "gradle", "library", "java21gl"),
     Stack("java", "java25", "gradle", "library", "java25gl"),
@@ -141,19 +130,13 @@ _STACKS: tuple[Stack, ...] = (
     Stack("java", "java21", "gradle", "autotest", "java21gt"),
     Stack("java", "java25", "gradle", "autotest", "java25gt"),
     Stack("java", "java17", "maven", "autotest", "java17mt"),
-    Stack("java", "java21", "maven", "autotest", "java21mt", Tier.REGRESSION),
+    Stack("java", "java21", "maven", "autotest", "java21mt"),
     Stack("java", "java25", "maven", "autotest", "java25mt"),
     # infrastructure
-    Stack("hcl", "aws", "terraform", "infrastructure", "awsti", Tier.REGRESSION),
+    Stack("hcl", "aws", "terraform", "infrastructure", "awsti"),
 )
 
 CATALOG: dict[str, Stack] = {stack.key: stack for stack in _STACKS}
-
-
-def by_tier(*tiers: Tier) -> dict[str, Stack]:
-    """The catalog narrowed to the given tiers — a scenario's parametrize source."""
-    wanted = set(tiers)
-    return {key: stack for key, stack in CATALOG.items() if stack.tier in wanted}
 
 
 def deployable(stacks: dict[str, Stack]) -> dict[str, Stack]:

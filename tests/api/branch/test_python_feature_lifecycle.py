@@ -7,18 +7,15 @@ from krci_testkit.clusters import Cluster
 from krci_testkit.models import Codebase, name_of
 from krci_testkit.naming import stage_cr_name
 from krci_testkit.waits import Timeouts
-from tests.api.smoke.conftest import OwnedPipeline
-from tests.test_data.codebase_data import feature_branch, smoke_change
+from tests.api.branch.conftest import OwnedPipeline
+from tests.test_data.codebase_data import feature_branch, simple_change
 from tests.test_data.deploy_data import feature_pipeline
 from tests.utils.cdpipeline_utils import CDPipelineUtils
 from tests.utils.codebase_utils import CodebaseUtils
 from tests.utils.deploy_utils import apps_payload, render_deploy_run, wait_image_tag
 from tests.utils.pipelinerun_utils import PipelineRuns, deploy_labels, submit_and_verify_change
 
-# Mirrors the factory signature of owned_pipeline (tests/api/smoke/conftest.py).
 
-
-@pytest.mark.smoke
 @pytest.mark.api
 def test_python_feature_lifecycle(
     imported_fastapi_codebase: Codebase,
@@ -63,7 +60,7 @@ def test_python_feature_lifecycle(
         vcs,
         pipeline_runs,
         imported_fastapi_codebase,
-        smoke_change(prefix="spc"),
+        simple_change(prefix="spc"),
         branch=branch.branch_name,
     )
     tag = wait_image_tag(cluster, timeouts, name, branch.branch_name)
