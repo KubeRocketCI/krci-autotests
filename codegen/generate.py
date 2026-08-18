@@ -51,12 +51,23 @@ def crd_to_jsonschema(crd_yaml: str, kind: str, api_version: str) -> dict:
 SWAGGER_ANY_OVERRIDES = {"v1.ParamValue"}
 
 
-def swagger_to_jsonschema(swagger_json: str, kind: str) -> dict:
+def swagger_to_jsonschema(swagger_json: str, kind: str, api_version: str) -> dict:
+    """The schema of the definition named by the entry's api_version and kind.
+
+    The root is selected by its versioned name, never by first suffix match: a
+    swagger bundling several versions of a kind would otherwise silently generate
+    a different API than the one the suite talks to."""
     doc = json.loads(swagger_json)
     defs = doc["definitions"]
     for name in SWAGGER_ANY_OVERRIDES & defs.keys():
         defs[name] = {"description": "custom JSON marshalling — any of string/array/object"}
-    root_key = next(k for k in defs if k.endswith(f".{kind}"))
+    root_key = f"{api_version.rpartition('/')[2]}.{kind}"
+    if root_key not in defs:
+        served = sorted(k for k in defs if k.endswith(f".{kind}"))
+        raise SystemExit(
+            f"{kind}: swagger has no definition {root_key!r} (serves {served}) — "
+            f"fix api_version or the pinned url in codegen/sources.yaml"
+        )
     # Inline the root definition (instead of $ref-ing it) so the generated root
     # class is a plain BaseModel, not a RootModel wrapper.
     schema = {**defs[root_key], "title": kind, "definitions": defs}
@@ -194,7 +205,7 @@ def generate(entry: dict) -> None:
     if is_crd:
         schema = crd_to_jsonschema(body, entry["kind"], entry["api_version"])
     else:
-        schema = swagger_to_jsonschema(body, entry["kind"])
+        schema = swagger_to_jsonschema(body, entry["kind"], entry["api_version"])
     with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as tmp:
         json.dump(schema, tmp)
         tmp_path = tmp.name

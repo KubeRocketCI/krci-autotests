@@ -34,4 +34,12 @@ def find_gitops(cluster: Cluster) -> Codebase:
     found = cluster.list(Codebase, labels=GITOPS_SELECTOR)
     if not found:
         raise NotFound(f"no gitops codebase ({GITOPS_SELECTOR}) in {cluster.namespace}")
+    if len(found) > 1:
+        # The operator keys on exactly one match; with several, which repo backs
+        # the ApplicationSets is arbitrary — refuse rather than silently pick one.
+        names = ", ".join(sorted(c.metadata["name"] if c.metadata else "?" for c in found))
+        raise RuntimeError(
+            f"expected one gitops codebase ({GITOPS_SELECTOR}) in {cluster.namespace}, "
+            f"found {len(found)}: {names}"
+        )
     return found[0]
