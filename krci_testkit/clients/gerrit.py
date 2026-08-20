@@ -279,7 +279,6 @@ def _body(resp: httpx.Response) -> Any:
 
 
 def _patch(files: Mapping[str, str | bytes]) -> str:
-    """A git patch adding every file, for ApplyPatchInput on change creation."""
     return "".join(_new_file_diff(path, content) for path, content in sorted(files.items()))
 
 
