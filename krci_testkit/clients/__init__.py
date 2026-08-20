@@ -5,7 +5,7 @@ from collections.abc import Mapping
 from typing import Protocol, TypedDict, Unpack
 
 from krci_testkit.clients.bitbucket import BitbucketClient
-from krci_testkit.clients.gerrit import GerritClient
+from krci_testkit.clients.gerrit import GerritClient, in_cluster_api_url
 from krci_testkit.clients.github import GitHubClient
 from krci_testkit.clients.gitlab import GitLabClient
 from krci_testkit.clients.protocol import (
@@ -18,11 +18,6 @@ from krci_testkit.clients.protocol import (
     VCSProvider,
 )
 from krci_testkit.models import GitProvider, GitServer, name_of
-
-# Gerrit's HTTP port on the platform's own image. Its GitServer carries httpsPort
-# 443 for the git remote, which the REST API does not answer on, so the in-cluster
-# fallback URL cannot be derived from the CR alone.
-_GERRIT_HTTP_PORT = 8080
 
 # Credential secrets a provider needs BEYOND the one its GitServer names. Gerrit's
 # nameSshKeySecret holds the SSH key the platform pushes with; the REST API needs
@@ -124,7 +119,7 @@ def _gerrit(
     # from the GitServer: gitHost is a Kubernetes service name that resolves
     # nowhere else. A run from outside the cluster supplies api_url.
     return GerritClient(
-        api_url or f"http://{host}:{_GERRIT_HTTP_PORT}",
+        api_url or in_cluster_api_url(host),
         _credential(credentials, "user"),
         _credential(credentials, "password"),
         **kw,

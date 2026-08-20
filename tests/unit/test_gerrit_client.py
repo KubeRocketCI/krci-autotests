@@ -41,9 +41,16 @@ def _gitserver(provider: str = "gerrit") -> GitServer:
     )
 
 
-def _client(recorder: GerritRecorder) -> GerritClient:
+def _client(
+    recorder: GerritRecorder, *, merge_timeout: float = 1, poll_interval: float = 0
+) -> GerritClient:
     return GerritClient(
-        BASE, "edp-ci", "pw", transport=recorder.transport, merge_timeout=1, poll_interval=0
+        BASE,
+        "edp-ci",
+        "pw",
+        transport=recorder.transport,
+        merge_timeout=merge_timeout,
+        poll_interval=poll_interval,
     )
 
 
@@ -188,9 +195,7 @@ def test_merge_change_fails_when_the_change_never_becomes_submittable():
             ("POST", "/a/changes/42/revisions/current/submit"): [(409, {"message": "blocked"})] * 8,
         }
     )
-    client = GerritClient(
-        BASE, "edp-ci", "pw", transport=rec.transport, merge_timeout=0.05, poll_interval=0.05
-    )
+    client = _client(rec, merge_timeout=0.05, poll_interval=0.05)
     with pytest.raises(WaitTimeout):
         client.merge_change("/app", CHANGE)
 
