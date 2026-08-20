@@ -27,12 +27,14 @@ class Recorder:
         self.requests: list[httpx.Request] = []
 
     def handler(self, request: httpx.Request) -> httpx.Response:
-        import httpx  # local: unit-test seam, keeps module import clean
-
         self.requests.append(request)
         key = (request.method, request.url.path)
         status, body, *extra = self.responses[key].pop(0)
-        headers = extra[0] if extra else None
+        return self._response(status, body, extra[0] if extra else None)
+
+    def _response(self, status: int, body: Any, headers: dict[str, str] | None) -> httpx.Response:
+        import httpx  # local: unit-test seam, keeps module import clean
+
         return httpx.Response(status, json=body, headers=headers)
 
     @property
@@ -51,14 +53,11 @@ class GerritRecorder(Recorder):
     prefix. A scripted body of None is served with no body at all, which is what
     Gerrit answers to a change edit or a project delete."""
 
-    def handler(self, request: httpx.Request) -> httpx.Response:
+    def _response(self, status: int, body: Any, headers: dict[str, str] | None) -> httpx.Response:
         import json
 
         import httpx  # local: unit-test seam, keeps module import clean
 
-        self.requests.append(request)
-        status, body, *extra = self.responses[(request.method, request.url.path)].pop(0)
-        headers = extra[0] if extra else None
         if body is None:
             return httpx.Response(status, headers=headers)
         guarded = b")]}'\n" + json.dumps(body).encode()

@@ -78,6 +78,19 @@ _STATE_TO_NEUTRAL = {
 }
 
 
+class BinaryContentUnsupported(Exception):
+    """Gerrit carries new content as a patch, and this client writes text patches
+    only. Raised instead of dropping the file or writing it corrupted — a scaffold
+    silently missing its gradle wrapper would fail much later and far away."""
+
+
+def in_cluster_api_url(host: str) -> str:
+    """The REST endpoint reachable from inside the cluster, the only one derivable
+    from the GitServer. Its httpsPort 443 serves the git remote, which the REST
+    API does not answer on; the API lives on the platform image's own HTTP port."""
+    return f"http://{host}:8080"
+
+
 class GerritClient:
     def __init__(
         self,
@@ -263,12 +276,6 @@ def _project(git_url_path: str) -> str:
 def _body(resp: httpx.Response) -> Any:
     text = resp.text
     return json.loads(text.removeprefix(_XSSI_PREFIX) if text.startswith(_XSSI_PREFIX) else text)
-
-
-class BinaryContentUnsupported(Exception):
-    """Gerrit carries new content as a patch, and this client writes text patches
-    only. Raised instead of dropping the file or writing it corrupted — a scaffold
-    silently missing its gradle wrapper would fail much later and far away."""
 
 
 def _patch(files: Mapping[str, str | bytes]) -> str:
