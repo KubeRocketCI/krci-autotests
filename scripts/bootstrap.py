@@ -16,7 +16,7 @@ from krci_testkit.clients import vcs_client
 from krci_testkit.clusters import Cluster
 from krci_testkit.config import KrciConfig, load_config
 from krci_testkit.errors import NotFound
-from krci_testkit.git_servers import connected_git_server
+from krci_testkit.git_servers import connected_git_server, git_credentials
 from krci_testkit.gitops import GITOPS_NAME, GITOPS_SELECTOR, find_gitops
 from krci_testkit.models import (
     CiTool,
@@ -28,6 +28,7 @@ from krci_testkit.models import (
     name_of,
     spec_dict,
 )
+from krci_testkit.naming import repo_path
 from krci_testkit.platform import VersioningType
 from krci_testkit.waits import Timeouts, reconciled, wait_for
 
@@ -56,7 +57,7 @@ def _gitops_spec(cfg: KrciConfig, *, adopt_existing_repo: bool) -> dict:
         defaultBranch="main",
         emptyProject=False,
         gitServer=cfg.git_server,
-        gitUrlPath=f"/{cfg.git_group}/{GITOPS_NAME}",
+        gitUrlPath=repo_path(cfg.git_group, GITOPS_NAME),
         deploymentScript="helm-chart",
         versioning=Versioning(type=VersioningType.SEMVER, startFrom="0.1.0-SNAPSHOT"),
         ciTool=CiTool.tekton,
@@ -67,9 +68,12 @@ def _gitops_spec(cfg: KrciConfig, *, adopt_existing_repo: bool) -> dict:
 def _repo_exists(cfg: KrciConfig, cluster: Cluster) -> bool:
     git_server = connected_git_server(cluster, cfg.git_server)
     client = vcs_client(
-        git_server, cluster.get_secret(git_server.spec.nameSshKeySecret), verify=cfg.httpx_verify
+        git_server,
+        git_credentials(cluster, git_server),
+        api_url=cfg.git_api_url,
+        verify=cfg.httpx_verify,
     )
-    return client.repo_exists(f"/{cfg.git_group}/{GITOPS_NAME}")
+    return client.repo_exists(repo_path(cfg.git_group, GITOPS_NAME))
 
 
 def ensure_gitops(cfg: KrciConfig, cluster: Cluster, timeouts: Timeouts) -> Codebase:

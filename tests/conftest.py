@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from krci_testkit.clients import VCSProvider, vcs_client
 from krci_testkit.clusters import Cluster
 from krci_testkit.config import KrciConfig, load_config
-from krci_testkit.git_servers import connected_git_server
+from krci_testkit.git_servers import connected_git_server, git_credentials
 from krci_testkit.models import Codebase, GitServer, git_url_path_of
 from krci_testkit.reporting import reportportal_reachable
 from krci_testkit.scaffolds import template_files
@@ -162,11 +162,13 @@ def vcs(
     cluster: Cluster, git_server: GitServer, cfg: KrciConfig, timeouts: Timeouts
 ) -> VCSProvider:
     """Provider client built purely from platform state: GitServer CR -> its
-    credential secret -> provider API. No provider facts live in env config."""
-    credentials = cluster.get_secret(git_server.spec.nameSshKeySecret)
+    credential secrets -> provider API. No provider facts live in env config;
+    KRCI_GIT_API_URL is a location, not a provider fact, and stays unset unless
+    the host cannot be reached from where the suite runs."""
     return vcs_client(
         git_server,
-        credentials,
+        git_credentials(cluster, git_server),
+        api_url=cfg.git_api_url,
         verify=cfg.httpx_verify,
         merge_timeout=timeouts.change_merge,
         poll_interval=timeouts.poll_interval,

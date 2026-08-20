@@ -20,10 +20,16 @@ Coverage:
   ArgoCD Application health and CodebaseImageStream tags.
 - **Portal UI** — token login, Overview widgets, Projects list.
 
-VCS access goes through the `VCSProvider` protocol; clients exist for GitLab, GitHub and
-Bitbucket Cloud. Gerrit raises `UnsupportedProvider`. Where a provider has no native
-equivalent of a neutral merge strategy (GitHub has no fast-forward merge), the client raises
-`UnsupportedMergeStrategy` rather than substituting a near-equivalent.
+VCS access goes through the `VCSProvider` protocol; clients exist for GitLab, GitHub,
+Bitbucket Cloud and Gerrit. Where a provider has no native equivalent of a neutral merge
+strategy — GitHub has no fast-forward merge, and Gerrit decides the strategy per project
+through `submit_type` rather than per request — the client raises `UnsupportedMergeStrategy`
+rather than substituting a near-equivalent.
+
+Gerrit differs enough to be worth naming: a change is a revision proposed against the target
+branch rather than a pull request from a source branch, landing one needs an approving vote
+and not just a request, and its `gitHost` is a cluster-internal service name. A run from
+inside the cluster derives the endpoint; a run from outside supplies `KRCI_GIT_API_URL`.
 
 The suite is environment-neutral: no cluster names, hosts or namespaces are hardcoded.
 Everything comes from configuration you provision per environment. Self-signed certificates
@@ -74,6 +80,7 @@ variables win over file values. Copy `.env.example` to `.env` to start.
 | `KRCI_PORTAL_TOKEN` | ServiceAccount bearer token for portal login                             | required for UI |
 | `KRCI_GIT_GROUP`    | VCS group/org path prefix for created repos (see below)                  | required        |
 | `KRCI_GIT_SERVER`   | GitServer CR name to test — always explicit; change `KRCI_GIT_GROUP` together with it (org paths differ per provider) | required |
+| `KRCI_GIT_API_URL`  | explicit API endpoint, for a provider whose host is not one (Gerrit)      | derived         |
 | `KRCI_GITHUB_TOKEN` | token for template-tarball fetches from api.github.com (import seeds); anonymous is ~60/hour — required in practice for `import-matrix` | empty |
 | `KRCI_VERIFY_SSL`   | TLS verification (false for self-signed environments)                    | `true`          |
 | `KRCI_CA_BUNDLE`    | optional CA bundle path                                                  | empty           |
@@ -204,9 +211,14 @@ See `CLAUDE.md` for the full authoring rules.
 - VCS repo cleanup is best-effort teardown via the provider client (the codebase-operator
   deliberately never deletes remote repos). A leftover repo survives only if teardown itself
   dies, and unique run-ID names keep leftovers collision-free.
-- One provider is exercised per environment — whatever the cluster's `GitServer` is. Only
-  GitLab is live-validated; the GitHub and Bitbucket Cloud clients are unit-verified and
-  need a matching environment to certify.
+- One provider is exercised per environment — whatever the cluster's `GitServer` is. GitLab
+  and Gerrit are live-validated (`smoke-api` against a Gerrit-backed environment); the GitHub
+  and Bitbucket Cloud clients are unit-verified and need a matching environment to certify.
+- Gerrit's `Verified` label is the whole CI status: it carries the review pipeline's verdict
+  and there is no per-check list behind it, so `change_statuses` returns one entry or none.
+- Gerrit carries new file content as a text patch, so a scaffold containing binary files
+  (a gradle wrapper jar, for instance) raises `BinaryContentUnsupported` instead of landing
+  it corrupted. Affects the seeded strategies — `import-matrix` cannot run whole on Gerrit.
 
 ## License
 

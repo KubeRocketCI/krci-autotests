@@ -27,6 +27,11 @@ class KrciConfig(BaseSettings):
     # multi-provider clusters an implicit "first connected" pick would silently
     # test an arbitrary provider). Change KRCI_GIT_GROUP together with this.
     git_server: str
+    # Explicit API endpoint, for a provider whose host is not one. Gerrit's gitHost
+    # is a cluster-internal service name, so a run from OUTSIDE the cluster has to
+    # say where the API answers; a run inside it derives the endpoint and needs
+    # nothing. Left unset for every provider whose host IS its endpoint.
+    git_api_url: str | None = None
     # Optional token for fetching template tarballs from api.github.com: anonymous
     # calls are capped at ~60/hour/IP, which an import sweep over the catalog exceeds.
     github_token: SecretStr | None = None

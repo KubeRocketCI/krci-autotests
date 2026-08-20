@@ -42,6 +42,29 @@ class Recorder:
         return httpx.MockTransport(self.handler)
 
 
+class GerritRecorder(Recorder):
+    """Recorder whose bodies carry Gerrit's XSSI guard.
+
+    Gerrit prefixes every JSON response with `)]}'`, which is not valid JSON.
+    Serving plain JSON here would let a client that never strips it pass its
+    tests and then fail against a real server, so the double reproduces the
+    prefix. A scripted body of None is served with no body at all, which is what
+    Gerrit answers to a change edit or a project delete."""
+
+    def handler(self, request: httpx.Request) -> httpx.Response:
+        import json
+
+        import httpx  # local: unit-test seam, keeps module import clean
+
+        self.requests.append(request)
+        status, body, *extra = self.responses[(request.method, request.url.path)].pop(0)
+        headers = extra[0] if extra else None
+        if body is None:
+            return httpx.Response(status, headers=headers)
+        guarded = b")]}'\n" + json.dumps(body).encode()
+        return httpx.Response(status, content=guarded, headers=headers)
+
+
 def raw_transport(content: bytes, *, expect_path: str):
     """Transport serving one raw (non-JSON) body — the double for tarball fetches.
     expect_path pins the endpoint so a wrong URL fails the test, not the decode."""

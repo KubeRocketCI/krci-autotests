@@ -4,10 +4,11 @@ import json
 
 import pytest
 
+from krci_testkit import clients
 from krci_testkit.clients import UnsupportedProvider, vcs_client
 from krci_testkit.clients.gitlab import GitLabClient
 from krci_testkit.clients.protocol import Change, CommitStatus, MergeStrategy, VCSProvider
-from krci_testkit.models import GitServer
+from krci_testkit.models import GitProvider, GitServer
 from krci_testkit.platform import CIStatus
 from krci_testkit.waits import WaitTimeout
 from tests.unit.vcs_mock import Recorder
@@ -89,11 +90,21 @@ def test_delete_repo_tolerates_missing_project():
     _client(rec).delete_repo("/grp/app")  # must not raise
 
 
-def test_vcs_client_dispatches_and_rejects_unknown_provider():
-    client = vcs_client(_gitserver(), {"token": "tok"})
-    assert isinstance(client, GitLabClient)
-    with pytest.raises(UnsupportedProvider):
-        vcs_client(_gitserver("gerrit"), {"token": "tok"})
+def test_vcs_client_dispatches_to_the_providers_client():
+    assert isinstance(vcs_client(_gitserver(), {"token": "tok"}), GitLabClient)
+
+
+def test_vcs_client_rejects_a_provider_that_has_no_client(monkeypatch: pytest.MonkeyPatch):
+    """Every provider the CRD declares now has a client, so this guard is only
+    reachable when the CRD gains one before this package does — which is exactly
+    the state a regenerated model can arrive in. The message has to say which
+    providers ARE available, or the reader cannot tell a typo from a gap."""
+    monkeypatch.delitem(clients._BUILDERS, GitProvider.gitlab)
+    with pytest.raises(UnsupportedProvider) as err:
+        vcs_client(_gitserver(), {"token": "tok"})
+    message = str(err.value)
+    assert "gitlab" in message  # the provider that was asked for
+    assert "github" in message  # and the ones that would have worked
 
 
 def test_vcs_client_names_the_secret_when_the_token_key_is_missing():

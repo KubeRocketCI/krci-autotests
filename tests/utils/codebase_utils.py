@@ -19,7 +19,7 @@ from krci_testkit.models import (
     name_of,
     spec_dict,
 )
-from krci_testkit.naming import branch_cr_name
+from krci_testkit.naming import branch_cr_name, repo_path
 from krci_testkit.waits import Timeouts, branch_ready, reconciled, wait_for, wait_gone
 from tests.test_data.codebase_data import BranchTestData, CodebaseTestData
 
@@ -30,7 +30,7 @@ def derive_git_url_path(data: CodebaseTestData, git_group: str) -> str:
     """The repo path a Codebase lands at when the data does not pin one. A repo
     seeded ahead of the CR (the import flow) must land at the SAME path the CR
     will derive — one formula, or the two silently drift apart."""
-    return data.git_url_path or f"/{git_group}/{data.name}"
+    return data.git_url_path or repo_path(git_group, data.name)
 
 
 def codebase_spec(data: CodebaseTestData, *, git_server: str, git_group: str) -> dict:
