@@ -12,7 +12,7 @@ from krci_testkit.auth import portal_token_identity
 from krci_testkit.clients import vcs_client
 from krci_testkit.clusters import Cluster, NotFound
 from krci_testkit.config import load_config
-from krci_testkit.git_servers import connected_git_server
+from krci_testkit.git_servers import connected_git_server, git_credentials
 from krci_testkit.models import CDPipeline, Codebase, PipelineRun, Stage, name_of
 
 
@@ -34,8 +34,10 @@ def main() -> int:
             f"({git_server.spec.gitProvider.value}) connected [KRCI_GIT_SERVER]"
         )
         try:
-            credentials = cluster.get_secret(git_server.spec.nameSshKeySecret)
-            client = vcs_client(git_server, credentials, verify=cfg.httpx_verify)
+            credentials = git_credentials(cluster, git_server)
+            client = vcs_client(
+                git_server, credentials, api_url=cfg.git_api_url, verify=cfg.httpx_verify
+            )
             print(f"OK   vcs: API authenticated (version {client.ping()})")
         except Exception as exc:  # noqa: BLE001
             failures.append(f"vcs API check failed: {exc}")

@@ -7,6 +7,7 @@ provider. A disconnected server is a platform state tests must observe, not one
 they repair.
 """
 
+from krci_testkit.clients import credential_secrets
 from krci_testkit.clusters import Cluster
 from krci_testkit.errors import NotFound
 from krci_testkit.models import GitServer
@@ -21,3 +22,15 @@ def connected_git_server(cluster: Cluster, name: str) -> GitServer:
     if not (git_server.status and git_server.status.connected):
         raise NotFound(f"GitServer/{name} exists but is not connected")
     return git_server
+
+
+def git_credentials(cluster: Cluster, git_server: GitServer) -> dict[str, str]:
+    """Every credential the provider's client needs, merged in read order.
+
+    WHICH secrets those are is the clients package's knowledge, because it owns
+    provider dispatch; reading them is the cluster's. Most providers name their
+    only secret on the GitServer itself and this reads exactly that one."""
+    credentials: dict[str, str] = {}
+    for secret in credential_secrets(git_server):
+        credentials |= cluster.get_secret(secret)
+    return credentials

@@ -60,6 +60,17 @@ def unique_name(prefix: str) -> str:
 # rename becomes a one-line change instead of a hunt across tests/utils.
 
 
+def repo_path(group: str, repo: str) -> str:
+    """A repository's gitUrlPath.
+
+    The group is a path PREFIX, not a required segment: Gerrit projects are flat,
+    so their path is the bare name. An empty group must not leave the separator
+    behind — the operator reads gitUrlPath as the project id, and a doubled slash
+    becomes part of the name it asks the provider to create."""
+    group = group.strip("/")
+    return f"/{group}/{repo}" if group else f"/{repo}"
+
+
 def branch_cr_name(codebase: str, branch: str) -> str:
     """CodebaseBranch CR name."""
     return f"{codebase}-{branch}"

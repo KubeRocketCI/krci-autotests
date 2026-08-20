@@ -7,6 +7,7 @@ from krci_testkit.naming import (
     argo_app_name,
     branch_cr_name,
     image_stream_name,
+    repo_path,
     stage_cr_name,
     stage_namespace,
     verified_stream_name,
@@ -105,3 +106,14 @@ def test_platform_name_rules():
     assert argo_app_name("pipe", "dev", "app") == "pipe-dev-app"
     assert verified_stream_name("pipe", "dev", "app") == "pipe-dev-app-verified"
     assert stage_namespace("krci", "pipe", "dev") == "krci-pipe-dev"
+
+
+def test_repo_path_drops_the_separator_when_a_provider_has_no_group():
+    """Gerrit projects are flat, so their path is the bare name. The operator reads
+    gitUrlPath as the project id, and a doubled slash would become part of the name
+    it asks the provider to create."""
+    assert repo_path("mygroup", "app") == "/mygroup/app"
+    assert repo_path("parent/team", "app") == "/parent/team/app"
+    assert repo_path("", "app") == "/app"
+    # A group written with separators of its own must not double them either.
+    assert repo_path("/mygroup/", "app") == "/mygroup/app"
