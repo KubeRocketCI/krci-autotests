@@ -56,7 +56,7 @@ class GerritRecorder(Recorder):
     def _response(self, status: int, body: Any, headers: dict[str, str] | None) -> httpx.Response:
         import json
 
-        import httpx  # local: unit-test seam, keeps module import clean
+        import httpx
 
         if body is None:
             return httpx.Response(status, headers=headers)
