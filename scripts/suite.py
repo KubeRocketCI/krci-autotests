@@ -22,6 +22,14 @@ import yaml
 ROOT = Path(__file__).resolve().parent.parent
 SUITES_FILE = ROOT / "suites.yaml"
 
+# Opt-in ReportPortal plugin, loaded by `run` only: a suite run is what produces
+# platform evidence.
+RP_PLUGIN = "krci_testkit.reporting"
+
+# Universe for the orphan scan. tests/unit is the testkit's own dev gate, run by
+# `make unit-tests`.
+PLATFORM_TESTS = ["tests", "--ignore=tests/unit"]
+
 # Collected tests no suite is expected to run. Empty by design: a test nothing
 # runs is dead weight, and `check` is what stops one appearing unnoticed.
 EXPECTED_ORPHANS: set[str] = set()
@@ -96,7 +104,7 @@ def _args(name: str) -> list[str]:
 def run(name: str, extra: list[str]) -> int:
     """Hand the suite to pytest in one process, arguments unquoted by any shell."""
     return subprocess.run(
-        [sys.executable, "-m", "pytest", *_args(name), *extra], cwd=ROOT
+        [sys.executable, "-m", "pytest", "-p", RP_PLUGIN, *_args(name), *extra], cwd=ROOT
     ).returncode
 
 
@@ -127,7 +135,7 @@ def check() -> int:
                 problems.append(f"suite {name!r}: entry resolves to no test: {entry}")
             covered |= resolved
     try:
-        everything = _collect(["tests"])
+        everything = _collect(PLATFORM_TESTS)
     except CollectionError as exc:
         # The orphan scan needs the full set of tests; without it there is nothing
         # to compare against and a silent pass would be a lie.

@@ -1,7 +1,10 @@
-# Suites are named lists of tests. A suite decides WHAT RUNS; a test never
+# Suites are named lists of PLATFORM tests. A suite decides WHAT RUNS; a test never
 # declares which suites it belongs to, so the same test can appear in any number
 # of them. Entries are pytest targets: a directory, a file, or one exact case
 # (parametrized cases are addressed by their id, e.g. a catalog stack key).
+#
+# Scope is the platform tests. tests/unit is the testkit's own dev gate, run by
+# `make unit-tests`.
 #
 # `parallel` is the xdist worker count for the suite; 0 runs in one process.
 # Tests marked `serial` refuse to run under xdist at all, so a suite that names
@@ -82,12 +85,6 @@ external-sources:
     # Case id = the external_sources.py entry key.
     - "tests/api/codebase/test_external_source.py::test_external_clone_lifecycle[epmd-edp-java-gradle-java21-lib]"
     - "tests/api/codebase/test_external_source.py::test_external_import_lifecycle[epmd-edp-java-maven-java21-app]"
-
-unit:
-  description: The testkit's own checks - offline, no cluster.
-  parallel: auto
-  tests:
-    - tests/unit
 
 github-smoke:
   description: Example of a suite composed from cases other suites already run.

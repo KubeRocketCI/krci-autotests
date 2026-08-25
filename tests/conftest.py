@@ -1,5 +1,4 @@
 import logging
-import os
 from collections.abc import Callable, Iterator
 
 import pytest
@@ -10,7 +9,6 @@ from krci_testkit.clusters import Cluster
 from krci_testkit.config import KrciConfig, load_config
 from krci_testkit.git_servers import connected_git_server, git_credentials
 from krci_testkit.models import Codebase, GitServer, git_url_path_of
-from krci_testkit.reporting import reportportal_reachable
 from krci_testkit.scaffolds import template_files
 from krci_testkit.waits import Timeouts, timeout_knobs
 from tests.test_data.codebase_data import CodebaseTestData
@@ -37,47 +35,13 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         parser.addini(knob.ini, knob.description, default=str(knob.default))
 
 
-def _unit_only(args: list[str]) -> bool:
-    paths = [a for a in args if not a.startswith("-")]
-    return bool(paths) and all(a.startswith("tests/unit") for a in paths)
-
-
-_RP_ENV_TO_INI = {
-    "RP_ENDPOINT": "rp_endpoint",
-    "RP_PROJECT": "rp_project",
-    "RP_API_KEY": "rp_api_key",
-    "RP_VERIFY_SSL": "rp_verify_ssl",
-}
-
-
-@pytest.hookimpl(tryfirst=True)
 def pytest_configure(config: pytest.Config) -> None:
-    """Load .env (real env wins) and wire ReportPortal from the environment.
-
-    RP values go through pytest's ini store because secrets must never reach argv.
-    Must run tryfirst: conftest hooks execute before entry-point plugins, which is
-    what lands these values before pytest-reportportal reads its config; popping
-    the private-but-stable _inicache guards against an earlier cached read.
-    """
+    """Load .env (real env wins)."""
     load_dotenv(override=False)
     # kr8s drives httpx, which logs every API request at INFO — that floods the
     # live log and buries the suite's own step lines.
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("httpcore").setLevel(logging.WARNING)
-    # Unit tests are a dev gate, not cluster test evidence — they never publish
-    # to ReportPortal (a unit run would otherwise appear as a 23-test "smoke" launch).
-    if not os.environ.get("RP_ENDPOINT") or _unit_only(config.args):
-        return
-    # Reporting is secondary: an unreachable RP server otherwise hangs startup and
-    # crashes the xdist workers before any test runs — probe first.
-    if not reportportal_reachable(os.environ["RP_ENDPOINT"]):
-        return
-    config.option.rp_enabled = True  # what --reportportal would have set
-    for env_name, ini_name in _RP_ENV_TO_INI.items():
-        value = os.environ.get(env_name)
-        if value:
-            config.inicfg[ini_name] = value
-            config._inicache.pop(ini_name, None)
 
 
 @pytest.hookimpl(trylast=True)
