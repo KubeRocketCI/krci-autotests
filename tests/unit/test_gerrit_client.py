@@ -21,6 +21,7 @@ from tests.unit.vcs_mock import GerritRecorder
 
 BASE = "https://gerrit.example.test"
 CHANGE = Change(id="42", source_branch="unused", url="u")
+SSH_KEY_SECRET = "ci-gerrit"
 
 
 def _gitserver(provider: str = "gerrit") -> GitServer:
@@ -34,7 +35,7 @@ def _gitserver(provider: str = "gerrit") -> GitServer:
                 "gitProvider": provider,
                 "gitUser": "edp-ci",
                 "httpsPort": 443,
-                "nameSshKeySecret": "gerrit-ciuser-sshkey",
+                "nameSshKeySecret": SSH_KEY_SECRET,
                 "sshPort": 30022,
             },
         }
@@ -287,8 +288,8 @@ def test_gerrit_client_satisfies_protocol():
 def test_gerrit_reads_the_http_password_beside_its_ssh_key():
     """The GitServer names only the SSH key the platform pushes with; the REST API
     needs an HTTP password, which the platform keeps in a secret of its own."""
-    assert credential_secrets(_gitserver()) == ["gerrit-ciuser-sshkey", "gerrit-ciuser-password"]
-    assert credential_secrets(_gitserver("github")) == ["gerrit-ciuser-sshkey"]
+    assert credential_secrets(_gitserver()) == [SSH_KEY_SECRET, "gerrit-ciuser-password"]
+    assert credential_secrets(_gitserver("github")) == [SSH_KEY_SECRET]
 
 
 def test_vcs_client_builds_gerrit_from_the_merged_credentials():
@@ -317,7 +318,7 @@ def test_gerrit_defaults_to_the_in_cluster_endpoint_and_honours_an_override():
     # wrong is silent until a live run cannot reach the server at all.
     default = vcs_client(_gitserver(), creds)
     assert str(default._http.base_url) == "http://gerrit.krci:8080/a/"  # pyright: ignore[reportAttributeAccessIssue]
-    override = vcs_client(_gitserver(), creds, api_url="https://gerrit.example.test")
+    override = vcs_client(_gitserver(), creds, api_url=BASE)
     assert str(override._http.base_url) == "https://gerrit.example.test/a/"  # pyright: ignore[reportAttributeAccessIssue]
 
 
