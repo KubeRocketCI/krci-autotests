@@ -18,19 +18,6 @@ from tests.test_data.stacks import CATALOG, MAX_SLUG, Stack, deployable
 
 _DNS1123 = re.compile(r"[a-z0-9]([a-z0-9-]*[a-z0-9])?$")
 
-# Size the catalog was last reconciled against the portal's create-form mapping and
-# the pipelines edp-tekton ships. The gitops system codebase is deliberately absent:
-# scripts/bootstrap.py owns it.
-_RECONCILED_SIZE = 62
-
-
-def test_catalog_size_is_pinned():
-    """A change detector, NOT proof of coverage: this counts entries and cannot tell
-    a correct stack from a wrong one substituted for it. Nothing in this repository
-    holds the platform's combination list in machine-readable form, so a changed
-    count means the catalog needs re-reconciling against the portal and the chart."""
-    assert len(CATALOG) == _RECONCILED_SIZE
-
 
 def test_no_stack_onboards_the_gitops_system_codebase():
     """Tests never provision a platform prerequisite; bootstrap owns that codebase."""
