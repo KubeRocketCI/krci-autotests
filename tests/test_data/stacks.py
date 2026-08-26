@@ -11,18 +11,21 @@ c and cpp both resolve to `cmake-none-app` — which is why the catalog is keyed
 name that includes the language.
 
 The catalog mirrors the portal's own language -> frameworks x buildTools mapping. The
-gitops system codebase is deliberately absent: scripts/bootstrap.py owns it, and tests
-never provision a platform prerequisite.
+gitops system codebase belongs to scripts/bootstrap.py; tests never provision a
+platform prerequisite.
 """
 
 from dataclasses import dataclass
 from typing import Literal
 
+from krci_testkit.naming import max_prefix_len
+
 CodebaseType = Literal["application", "library", "autotest", "infrastructure"]
 
-# Longest slug that still fits a scenario tag inside unique_name's 30-char DNS-1123
-# budget once the run id and an xdist worker suffix are taken; asserted in the unit tests.
-MAX_SLUG = 10
+# A scenario prefix is "<tag>-<slug>"; tags run to this length.
+_MAX_SCENARIO_TAG = 5
+# Longest slug that leaves a scenario tag intact inside unique_name's budget.
+MAX_SLUG = max_prefix_len() - _MAX_SCENARIO_TAG - 1
 
 _TEMPLATE_REPO_OWNER = "https://github.com/epmd-edp"
 

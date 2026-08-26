@@ -102,9 +102,9 @@ def _fail_if_stuck(status: Any) -> None:
     CodebaseBranch count failures; CDPipeline and Stage carry no such field and
     are left to poll, since `result: error` alone is a state they recover from.
 
-    status is deliberately duck-typed: it is the .status of whichever generated
-    model class is being polled (Codebase, CodebaseBranch, CDPipeline, Stage all
-    share the shape this reads but have no common base type)."""
+    status is duck-typed here and in the readiness predicates below: Codebase,
+    CodebaseBranch, CDPipeline and Stage share the shape this reads and have no
+    common base type."""
     if (getattr(status, "failureCount", None) or 0) < _MAX_RECONCILE_FAILURES:
         return
     raise FailFast(
@@ -116,10 +116,7 @@ def _fail_if_stuck(status: Any) -> None:
 def reconciled(cr: Any) -> bool:
     """KRCI operator convention: a reconciled CR is ready when status.available
     is true AND status.result is success — available alone can accompany an
-    error result (Codebase, CDPipeline and Stage all share this status shape).
-
-    cr is deliberately duck-typed across generated model classes (see
-    platform.ReconcileResult's docstring)."""
+    error result (Codebase, CDPipeline and Stage all share this status shape)."""
     status = cr.status
     if not status:
         return False
@@ -138,10 +135,7 @@ def branch_ready(cr: Any) -> bool:
     and the caller then addresses a git branch that does not exist yet — the VCS
     answers 400 for the unknown ref, far from the wait that should have caught it.
     status.git is the operator's own git-side marker and the only field that
-    distinguishes the two.
-
-    cr is deliberately duck-typed across generated model classes (see
-    platform.ReconcileResult's docstring)."""
+    distinguishes the two."""
     status = cr.status
     if not status:
         return False

@@ -30,10 +30,6 @@ RP_PLUGIN = "krci_testkit.reporting"
 # `make unit-tests`.
 PLATFORM_TESTS = ["tests", "--ignore=tests/unit"]
 
-# Collected tests no suite is expected to run. Empty by design: a test nothing
-# runs is dead weight, and `check` is what stops one appearing unnoticed.
-EXPECTED_ORPHANS: set[str] = set()
-
 
 def _suites() -> dict:
     return yaml.safe_load(SUITES_FILE.read_text())
@@ -144,7 +140,7 @@ def check() -> int:
             print(f"FAIL {problem}")
         print("suites: FAILED (collection incomplete)")
         return 1
-    orphans = everything - covered - EXPECTED_ORPHANS
+    orphans = everything - covered
     problems += [f"no suite runs: {nodeid}" for nodeid in sorted(orphans)]
     for problem in problems:
         print(f"FAIL {problem}")

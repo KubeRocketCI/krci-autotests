@@ -29,10 +29,9 @@ from krci_testkit.platform import CIStatus
 
 log = logging.getLogger(__name__)
 
-# GitHub's merge API has no fast-forward method. Rebase is NOT the same thing
-# (it rewrites the commits), so FAST_FORWARD is absent on purpose: a test asking
-# for it must fail loudly here rather than pass while testing rebase — the same
-# silent-degradation rule the GitLab client's squash assertion enforces.
+# GitHub's merge API has no fast-forward method, and rebase rewrites the commits,
+# so it is no substitute. A test asking for FAST_FORWARD fails here rather than
+# passing while testing rebase.
 _STRATEGY_TO_METHOD = {
     MergeStrategy.MERGE: "merge",
     MergeStrategy.SQUASH: "squash",

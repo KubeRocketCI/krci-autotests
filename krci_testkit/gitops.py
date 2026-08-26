@@ -6,8 +6,8 @@ This module carries WHO that codebase is — nothing that provisions it: onboard
 is an environment step (scripts/bootstrap.py), and a test that needs the repo
 resolves it here the same way the operator does, by label rather than by name.
 
-Absence is deliberately not handled: a namespace without a gitops codebase is a
-platform state tests must observe, not one they repair.
+A namespace without a gitops codebase is a platform state tests observe, never
+one they repair.
 """
 
 from krci_testkit import labels

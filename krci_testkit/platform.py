@@ -6,11 +6,9 @@ StrEnum, so it still formats and compares as the plain string the API returns
 while a typo becomes an error at authoring time instead of a wait that burns its
 whole timeout and reports "no pipelinerun appeared".
 
-CR spec vocabulary the CRD declares as an enum (strategy, ciTool, trigger type)
-is NOT here: it comes from the generated models in krci_testkit.models, which
-are the CRD itself. Spec fields the CRD schema types as free `str` while the
-platform treats them as a closed set get hand-written enums here — the schema
-lost the fact, so a generated model cannot recover it.
+Where a new value belongs: enum in the CRD schema (strategy, ciTool, trigger type)
+-> krci_testkit.models, the generated CRD. Free `str` in the schema but a closed
+set in practice -> a hand-written enum here.
 """
 
 from enum import StrEnum
@@ -27,9 +25,8 @@ class PipelineType(StrEnum):
 
 class ReconcileResult(StrEnum):
     """Value of status.result on every KRCI operator CR (Codebase, CodebaseBranch,
-    CDPipeline, Stage all share the shape). Not taken from one CR's generated Result
-    enum on purpose: reconciled()/succeeded() are deliberately duck-typed across
-    kinds, so they need one kind-independent name for the verdict."""
+    CDPipeline, Stage all share the shape). reconciled()/succeeded() duck-type across
+    kinds, so the verdict needs one kind-independent name."""
 
     SUCCESS = "success"
 
@@ -71,7 +68,7 @@ class HealthStatus(StrEnum):
 class VersioningType(StrEnum):
     """Codebase spec.versioning.type — closed in the codebase-operator but unmarked
     in the CRD schema. The legacy "edp" value is deprecated and has no pipelines on
-    current platform versions, so it is deliberately absent here."""
+    current platform versions."""
 
     DEFAULT = "default"
     SEMVER = "semver"

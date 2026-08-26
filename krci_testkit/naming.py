@@ -34,6 +34,15 @@ def run_id() -> str:
 
 
 _MAX_NAME = 30
+# "gw" plus up to two digits, the xdist worker id run_id() appends.
+_WORKER_SUFFIX_MAX = 4
+
+
+def max_prefix_len() -> int:
+    """Longest prefix unique_name keeps intact, worst case: a hashed run id and an
+    xdist worker suffix. Derive authoring-time name budgets from this, never from a
+    copy of the numbers above."""
+    return _MAX_NAME - len("at-") - _TOKEN_LEN - _WORKER_SUFFIX_MAX - 1
 
 
 def _dns1123(value: str) -> str:

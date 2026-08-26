@@ -61,9 +61,8 @@ _MERGE_RETRY_STATUSES = frozenset({409})
 # this single label carries the whole CI verdict.
 _CI_LABEL = "Verified"
 
-# Approval the CLIENT supplies. Verified is deliberately absent: the platform
-# votes it from the review pipeline's own outcome, and voting it here would let
-# a change land while its pipeline was red.
+# Approval the CLIENT supplies. The platform votes Verified from the review
+# pipeline's own outcome; voting it here would land a change with a red pipeline.
 _APPROVAL = {"Code-Review": 2}
 
 # Approval for a repository the platform does not know yet (an import seed).
