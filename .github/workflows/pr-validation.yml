@@ -1,0 +1,76 @@
+name: PR Validation
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  validate:
+    name: Validate
+    runs-on: ubuntu-latest
+    # Scope is the framework itself. Platform suites (suites.yaml) need a live
+    # KRCI cluster and a VCS account, so they never run here.
+    env:
+      # Every `uv run` inside the make targets asserts uv.lock is in sync with
+      # pyproject.toml instead of silently relocking.
+      UV_LOCKED: "1"
+
+    steps:
+      # fetch-depth: 0 is for the commit-message checks below; the lint steps
+      # need no history.
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Check commit format
+        uses: gsactions/commit-message-checker@v2
+        with:
+          # Human commits MUST carry a Jira ID: "EPMDEDP-<ID>: <type>: <desc>".
+          # The only exception is Dependabot bumps, which cannot reference a
+          # ticket (e.g. "build(deps): Bump ..." or "ci: bump ...").
+          pattern: '^(EPMDEDP-\d+: (build|chore|ci|docs|feat|fix|perf|refactor|style|test)(!)?: .+|(build|chore|ci|deps)(\(deps\))?: [Bb]ump .+)$'
+          error: 'Commit title must be "EPMDEDP-<ID>: <type>: <description>" (Jira ID is mandatory). Example: "EPMDEDP-16058: feat: add feature".'
+          excludeDescription: 'true'
+          excludeTitle: 'true'
+          checkAllCommitMessages: 'true'
+          accessToken: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check commit title length
+        uses: gsactions/commit-message-checker@v2
+        with:
+          pattern: '^.{10,120}$'
+          error: 'Commit title must be between 10 and 120 characters long.'
+          excludeDescription: 'true'
+          excludeTitle: 'true'
+          checkAllCommitMessages: 'true'
+          accessToken: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up uv
+        # Pinned to an exact release: this action publishes no floating major tag.
+        uses: astral-sh/setup-uv@v10.0.1
+        with:
+          enable-cache: true
+          cache-python: true
+
+      - name: Install dependencies
+        # Python version comes from .python-version; uv downloads it.
+        # Playwright browsers are deliberately not installed - neither gate
+        # launches one, so `make install` is not the CI entry point.
+        run: uv sync --all-groups
+
+      - name: Lint
+        run: make lint
+
+      - name: Unit tests
+        run: make unit-tests
