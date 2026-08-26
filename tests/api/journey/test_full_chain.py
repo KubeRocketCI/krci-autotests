@@ -27,9 +27,6 @@ from tests.utils.deploy_utils import (
 )
 from tests.utils.pipelinerun_utils import PipelineRuns, deploy_labels, submit_and_verify_change
 
-# Published so any suite reusing codebase_with_cd_before_build's yield shape can
-# annotate it without repeating the tuple at every call site.
-
 
 @pytest.fixture
 def journey_setup(

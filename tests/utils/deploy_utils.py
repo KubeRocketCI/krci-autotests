@@ -35,8 +35,8 @@ from tests.utils.codebase_utils import CodebaseUtils
 log = logging.getLogger(__name__)
 
 # What codebase_with_cd_before_build hands a scenario. Published here, beside the
-# function that produces it, so the three suites that consume it annotate one
-# shared name instead of each restating the same three-tuple.
+# function that produces it, so consuming suites annotate one shared name instead
+# of each restating the same three-tuple.
 CodebaseWithCd = tuple[Codebase, CodebaseTestData, CDPipelineTestData]
 
 
