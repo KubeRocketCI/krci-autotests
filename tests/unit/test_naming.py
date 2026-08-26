@@ -92,10 +92,10 @@ def test_long_prefix_name_stays_within_budget_and_dns1123():
 def test_short_prefix_name_is_unaffected_by_the_truncation_fix(monkeypatch: pytest.MonkeyPatch):
     """Only the PREFIX must be truncated now, not the assembled string — a short
     prefix that never hit the old truncation must produce exactly the same name."""
-    monkeypatch.setenv("KRCI_RUN_ID", "fixedid")
+    monkeypatch.setenv("KRCI_RUN_ID", "fixed1")
     monkeypatch.delenv("PYTEST_XDIST_WORKER", raising=False)
     naming._cached_run_id = None
-    assert naming.unique_name("go") == "at-go-fixedid"
+    assert naming.unique_name("go") == "at-go-fixed1"
     naming._cached_run_id = None
 
 

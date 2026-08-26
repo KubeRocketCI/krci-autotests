@@ -4,9 +4,9 @@ Overrides land on the repo's default branch through the provider-neutral
 submit+merge verbs — the portal itself never writes the file (it deep-links users
 to commit out-of-band), so a VCS commit IS portal parity.
 
-Onboarding the gitops codebase is NOT here: it is an environment prerequisite
-(scripts/bootstrap.py). A namespace without one makes deploy scenarios fail, and
-that failure is the platform's answer, not something the suite arranges away.
+The gitops codebase is an environment prerequisite owned by scripts/bootstrap.py.
+A namespace without one fails deploy scenarios, and that failure is the finding —
+suites never arrange it away.
 """
 
 import logging
@@ -35,8 +35,8 @@ def merge_values_override(
     they are not the behavior under test.
 
     The repo is resolved here by the operator's own selector rather than taken as
-    a fixture: the caller needs a commit target, and turning that into a declared
-    prerequisite is what previously let the suite provision one for itself."""
+    a fixture: a fixture would make this module provision an environment
+    prerequisite, which suites never do."""
     gitops = find_gitops(cluster)
     path = gitops_values_path(pipeline, stage, app)
     change = vcs.submit_change(

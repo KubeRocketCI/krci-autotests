@@ -6,10 +6,10 @@ import re
 import uuid
 
 _cached_run_id: str | None = None
-_TOKEN_LEN = 6
 # External ids up to this length pass through verbatim (short CI run numbers stay
-# recognizable); anything longer is hashed down to _TOKEN_LEN.
-_HASH_OVER = 8
+# recognizable); anything longer is hashed down to it. A run id never exceeds it,
+# which is what makes max_prefix_len()'s budget exact.
+_TOKEN_LEN = 6
 
 
 def run_id() -> str:
@@ -26,7 +26,7 @@ def run_id() -> str:
     global _cached_run_id
     if _cached_run_id is None:
         external = os.environ.get("KRCI_RUN_ID")
-        if external and len(external) > _HASH_OVER:
+        if external and len(external) > _TOKEN_LEN:
             external = hashlib.sha1(external.encode()).hexdigest()[:_TOKEN_LEN]
         worker = os.environ.get("PYTEST_XDIST_WORKER", "")
         _cached_run_id = (external or uuid.uuid4().hex[:_TOKEN_LEN]) + worker
@@ -39,8 +39,8 @@ _WORKER_SUFFIX_MAX = 4
 
 
 def max_prefix_len() -> int:
-    """Longest prefix unique_name keeps intact, worst case: a hashed run id and an
-    xdist worker suffix. Derive authoring-time name budgets from this, never from a
+    """Longest prefix unique_name keeps intact, worst case: a full-length run token and
+    an xdist worker suffix. Derive authoring-time name budgets from this, never from a
     copy of the numbers above."""
     return _MAX_NAME - len("at-") - _TOKEN_LEN - _WORKER_SUFFIX_MAX - 1
 
