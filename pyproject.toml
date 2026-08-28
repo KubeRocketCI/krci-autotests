@@ -61,6 +61,11 @@ filterwarnings = [
 # Tag a run from CI instead, e.g. -o rp_launch_attributes="suite:smoke".
 rp_launch = "krci-autotests"
 rp_verify_ssl = true
+# Keep a stale keep-alive connection from hanging the end of a run: the agent
+# sets no timeout of its own, and only a retry, on a fresh socket, closes the launch.
+rp_connect_timeout = 5
+rp_read_timeout = 30
+rp_api_retries = 3
 
 [tool.ruff]
 target-version = "py314"
