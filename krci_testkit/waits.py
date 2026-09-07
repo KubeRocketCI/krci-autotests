@@ -59,6 +59,9 @@ class Timeouts:
         900, "seconds for a deploy PipelineRun to succeed (incl. ArgoCD sync)"
     )
     vcs_request: int = _knob(30, "seconds for a single VCS API request before it is abandoned")
+    git_server_connected: int = _knob(
+        300, "seconds for the GitServer to report connected after a platform (re)deploy"
+    )
     poll_interval: int = _knob(5, "wait poll interval in seconds", ini="krci_poll_interval")
     ui_expect: int = _knob(15, "seconds for Playwright expect() assertions (UI suite default)")
 

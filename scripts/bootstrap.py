@@ -65,8 +65,18 @@ def _gitops_spec(cfg: KrciConfig, *, adopt_existing_repo: bool) -> dict:
     return spec_dict(spec)
 
 
-def _repo_exists(cfg: KrciConfig, cluster: Cluster) -> bool:
-    git_server = connected_git_server(cluster, cfg.git_server)
+def _repo_exists(cfg: KrciConfig, cluster: Cluster, timeouts: Timeouts) -> bool:
+    # A deploy recreates the platform seconds before this runs, so the codebase-operator
+    # has usually not marked the GitServer connected yet. connected_git_server reads the
+    # status once and raises - right for a test, which reports the platform as it finds
+    # it, wrong for provisioning. wait_for retries NotFound, which is exactly that state.
+    git_server = wait_for(
+        lambda: connected_git_server(cluster, cfg.git_server),
+        lambda _: True,
+        timeout=timeouts.git_server_connected,
+        interval=timeouts.poll_interval,
+        describe=f"GitServer/{cfg.git_server} connected",
+    )
     client = vcs_client(
         git_server,
         git_credentials(cluster, git_server),
@@ -90,7 +100,7 @@ def ensure_gitops(cfg: KrciConfig, cluster: Cluster, timeouts: Timeouts) -> Code
         )
         return existing
 
-    adopt = _repo_exists(cfg, cluster)
+    adopt = _repo_exists(cfg, cluster, timeouts)
     log.info(
         "onboarding gitops codebase %s (%s strategy — repo %s)",
         GITOPS_NAME,
