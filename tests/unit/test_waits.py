@@ -73,6 +73,7 @@ def test_knob_ini_names_are_stable():
         "krci_timeout_change_merge",
         "krci_timeout_deploy_success",
         "krci_timeout_vcs_request",
+        "krci_timeout_git_server_connected",
         "krci_poll_interval",
         "krci_timeout_ui_expect",
     }
