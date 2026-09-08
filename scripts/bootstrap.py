@@ -66,13 +66,12 @@ def _gitops_spec(cfg: KrciConfig, *, adopt_existing_repo: bool) -> dict:
 
 
 def _repo_exists(cfg: KrciConfig, cluster: Cluster, timeouts: Timeouts) -> bool:
-    # A deploy recreates the platform seconds before this runs, so the codebase-operator
-    # has usually not marked the GitServer connected yet. connected_git_server reads the
-    # status once and raises - right for a test, which reports the platform as it finds
-    # it, wrong for provisioning. wait_for retries NotFound, which is exactly that state.
+    # A deploy recreates the platform seconds before this runs, so the GitServer is
+    # usually not connected yet. wait_for retries the NotFound that connected_git_server
+    # raises for that state.
     git_server = wait_for(
         lambda: connected_git_server(cluster, cfg.git_server),
-        lambda _: True,
+        bool,
         timeout=timeouts.git_server_connected,
         interval=timeouts.poll_interval,
         describe=f"GitServer/{cfg.git_server} connected",

@@ -1,9 +1,5 @@
-"""Unit tests for bootstrap's provisioning waits.
-
-bootstrap runs seconds after a deploy recreated the platform, so it has to tolerate a
-GitServer the codebase-operator has not reconciled yet. The tests keep failing fast on a
-disconnected server — that is them reporting the platform as they find it — which is why
-the wait lives in bootstrap and not in connected_git_server."""
+"""Unit tests for bootstrap's provisioning waits: the GitServer connection wait that
+lets the script run against a platform a deploy has just recreated."""
 
 from typing import cast
 
