@@ -58,7 +58,7 @@ jobs:
 
       - name: Set up uv
         # Pinned to an exact release: this action publishes no floating major tag.
-        uses: astral-sh/setup-uv@v10.0.1
+        uses: astral-sh/setup-uv@v10.1.0
         with:
           enable-cache: true
           cache-python: true
