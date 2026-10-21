@@ -13,7 +13,7 @@ from krci_testkit.clients.protocol import (
 )
 from krci_testkit.platform import CIStatus
 from krci_testkit.waits import WaitTimeout
-from tests.unit.vcs_mock import Recorder
+from tests.unit.vcs_mock import Recorder, Script
 
 
 def _client(recorder: Recorder) -> GitHubClient:
@@ -24,6 +24,19 @@ def _client(recorder: Recorder) -> GitHubClient:
         merge_timeout=1,
         poll_interval=0,
     )
+
+
+def _git_data_script(repo: str, *, blobs: int = 1, force_moved: str | None = "main") -> Script:
+    """Scripted Git Data answers of a create_repo seed: blobs b1..bN, tree t1, commit c1,
+    and the force-move of `force_moved` unless the test scripts the branch handling."""
+    script: Script = {
+        ("POST", f"{repo}/git/blobs"): [(201, {"sha": f"b{i}"}) for i in range(1, blobs + 1)],
+        ("POST", f"{repo}/git/trees"): [(201, {"sha": "t1"})],
+        ("POST", f"{repo}/git/commits"): [(201, {"sha": "c1"})],
+    }
+    if force_moved is not None:
+        script[("PATCH", f"{repo}/git/refs/heads/{force_moved}")] = [(200, {})]
+    return script
 
 
 def test_submit_change_creates_ref_file_and_pull():
@@ -167,14 +180,15 @@ def test_github_client_satisfies_protocol():
 
 
 def test_create_repo_under_org_seeds_one_commit_via_git_data():
+    """An auto-initialized repo is seeded as one parentless commit holding exactly
+    `files`: the branch is force-moved onto it, so the auto-init README is gone."""
     repo = "/repos/grp/app"
     rec = Recorder(
         {
-            ("POST", "/orgs/grp/repos"): [(201, {"full_name": "grp/app"})],
-            ("POST", f"{repo}/git/blobs"): [(201, {"sha": "b1"}), (201, {"sha": "b2"})],
-            ("POST", f"{repo}/git/trees"): [(201, {"sha": "t1"})],
-            ("POST", f"{repo}/git/commits"): [(201, {"sha": "c1"})],
-            ("POST", f"{repo}/git/refs"): [(201, {"ref": "refs/heads/main"})],
+            ("POST", "/orgs/grp/repos"): [
+                (201, {"full_name": "grp/app", "default_branch": "main"})
+            ],
+            **_git_data_script(repo, blobs=2),
         }
     )
     _client(rec).create_repo(
@@ -183,14 +197,42 @@ def test_create_repo_under_org_seeds_one_commit_via_git_data():
         files={"go.mod": "module app\n", "main.go": "package main\n"},
     )
     create_body = json.loads(rec.requests[0].content)
-    assert create_body == {"name": "app", "private": True, "auto_init": False}
+    assert create_body == {"name": "app", "private": True, "auto_init": True}
     tree_body = json.loads(rec.requests[3].content)
-    assert [e["path"] for e in tree_body["tree"]] == ["go.mod", "main.go"]
-    assert [e["sha"] for e in tree_body["tree"]] == ["b1", "b2"]
+    assert tree_body == {
+        "tree": [
+            {"path": "go.mod", "mode": "100644", "type": "blob", "sha": "b1"},
+            {"path": "main.go", "mode": "100644", "type": "blob", "sha": "b2"},
+        ]
+    }
     commit_body = json.loads(rec.requests[4].content)
     assert commit_body == {"message": "Initial commit", "tree": "t1", "parents": []}
     ref_body = json.loads(rec.requests[5].content)
-    assert ref_body == {"ref": "refs/heads/main", "sha": "c1"}
+    assert ref_body == {"sha": "c1", "force": True}
+
+
+def test_create_repo_replaces_a_differently_named_initial_branch():
+    """default_branch differs from the auto-init branch: it is created on the root
+    commit, made the default, and the auto-init branch is deleted."""
+    repo = "/repos/grp/app"
+    rec = Recorder(
+        {
+            ("POST", "/orgs/grp/repos"): [
+                (201, {"full_name": "grp/app", "default_branch": "main"})
+            ],
+            **_git_data_script(repo, force_moved=None),
+            ("POST", f"{repo}/git/refs"): [(201, {})],
+            ("PATCH", repo): [(200, {})],
+            ("DELETE", f"{repo}/git/refs/heads/main"): [(204, None)],
+        }
+    )
+    _client(rec).create_repo("/grp/app", default_branch="master", files={"f.txt": "x\n"})
+    assert json.loads(rec.requests[4].content) == {"ref": "refs/heads/master", "sha": "c1"}
+    assert json.loads(rec.requests[5].content) == {"default_branch": "master"}
+    assert (rec.requests[6].method, rec.requests[6].url.path) == (
+        "DELETE",
+        f"{repo}/git/refs/heads/main",
+    )
 
 
 def test_create_repo_falls_back_to_user_when_owner_is_no_org():
@@ -201,15 +243,15 @@ def test_create_repo_falls_back_to_user_when_owner_is_no_org():
     rec = Recorder(
         {
             ("POST", "/orgs/edp-robot/repos"): [(404, {"message": "Not Found"})],
-            ("POST", "/user/repos"): [(201, {"full_name": "edp-robot/app"})],
-            ("POST", f"{repo}/git/blobs"): [(201, {"sha": "b1"})],
-            ("POST", f"{repo}/git/trees"): [(201, {"sha": "t1"})],
-            ("POST", f"{repo}/git/commits"): [(201, {"sha": "c1"})],
-            ("POST", f"{repo}/git/refs"): [(201, {"ref": "refs/heads/main"})],
+            ("POST", "/user/repos"): [
+                (201, {"full_name": "edp-robot/app", "default_branch": "main"})
+            ],
+            **_git_data_script(repo),
         }
     )
     _client(rec).create_repo("/edp-robot/app", default_branch="main", files={"f.txt": "x\n"})
     assert [r.url.path for r in rec.requests[:2]] == ["/orgs/edp-robot/repos", "/user/repos"]
+    assert rec.requests[1].content == rec.requests[0].content  # auto-initialized as well
 
 
 def test_create_repo_accepts_canonical_casing_of_the_requested_owner():
@@ -219,11 +261,10 @@ def test_create_repo_accepts_canonical_casing_of_the_requested_owner():
     repo = "/repos/GRP/app"
     rec = Recorder(
         {
-            ("POST", "/orgs/GRP/repos"): [(201, {"full_name": "grp/app"})],
-            ("POST", f"{repo}/git/blobs"): [(201, {"sha": "b1"})],
-            ("POST", f"{repo}/git/trees"): [(201, {"sha": "t1"})],
-            ("POST", f"{repo}/git/commits"): [(201, {"sha": "c1"})],
-            ("POST", f"{repo}/git/refs"): [(201, {"ref": "refs/heads/main"})],
+            ("POST", "/orgs/GRP/repos"): [
+                (201, {"full_name": "grp/app", "default_branch": "main"})
+            ],
+            **_git_data_script(repo),
         }
     )
     _client(rec).create_repo("/GRP/app", default_branch="main", files={"f": "x"})

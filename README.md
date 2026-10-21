@@ -216,6 +216,10 @@ See `CLAUDE.md` for the full authoring rules.
   and Bitbucket Cloud clients are unit-verified and need a matching environment to certify.
 - Gerrit's `Verified` label is the whole CI status: it carries the review pipeline's verdict
   and there is no per-check list behind it, so `change_statuses` returns one entry or none.
+- GitHub seeds an import source by force-moving the new repository's default branch onto a
+  root commit that replaces the auto-init one, so the owner must allow force pushes to a new
+  repository's default branch: a ruleset or branch protection that blocks them fails the
+  seeded strategies.
 - Gerrit carries new file content as a text patch, so a scaffold containing binary files
   (a gradle wrapper jar, for instance) raises `BinaryContentUnsupported` instead of landing
   it corrupted. Affects the seeded strategies — `import-matrix` cannot run whole on Gerrit.

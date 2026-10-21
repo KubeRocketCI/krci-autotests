@@ -108,21 +108,21 @@ class GitHubClient:
 
         Content goes through the Git Data API (blobs -> one tree -> one commit ->
         ref): one commit like the other providers, where the Contents API would
-        write a commit per file and contend on the branch head. Creating the ref
-        makes default_branch the repo's first — and therefore default — branch."""
+        write a commit per file and contend on the branch head. GitHub refuses Git
+        Data writes to a repo without commits (409 "Git Repository is empty."), so
+        the repo is created auto-initialized and the content becomes a root commit
+        that replaces the auto-init one: default_branch ends as the repo's only
+        branch and its default, holding exactly `files`."""
         owner, name = git_url_path.strip("/").split("/", 1)
-        resp = self._http.post(
-            f"/orgs/{path_segment(owner)}/repos",
-            json={"name": name, "private": True, "auto_init": False},
-        )
+        repo_body = {"name": name, "private": True, "auto_init": True}
+        resp = self._http.post(f"/orgs/{path_segment(owner)}/repos", json=repo_body)
         if resp.status_code == httpx.codes.NOT_FOUND:
             # The owner is a user account, not an organization; a user token can
             # only create repos under the authenticated user.
-            resp = self._http.post(
-                "/user/repos", json={"name": name, "private": True, "auto_init": False}
-            )
+            resp = self._http.post("/user/repos", json=repo_body)
         resp.raise_for_status()
-        created_path = str(resp.json().get("full_name", ""))
+        created = resp.json()
+        created_path = str(created.get("full_name", ""))
         # full_name carries GitHub's canonical casing; the configured group may not.
         if created_path.casefold() != f"{owner}/{name}".casefold():
             # The org-404 also covers "org missing" and "token lacks scope" — the
@@ -135,6 +135,7 @@ class GitHubClient:
                 "create in (missing org or missing scope)"
             )
         repo = _repo(git_url_path)
+        initial_branch = created["default_branch"]
         tree = []
         for path, content in files.items():
             raw = content.encode() if isinstance(content, str) else content
@@ -158,10 +159,23 @@ class GitHubClient:
             json={"message": "Initial commit", "tree": resp.json()["sha"], "parents": []},
         )
         resp.raise_for_status()
-        self._http.post(
-            f"{repo}/git/refs",
-            json={"ref": f"refs/heads/{default_branch}", "sha": resp.json()["sha"]},
-        ).raise_for_status()
+        root_sha = resp.json()["sha"]
+        if initial_branch == default_branch:
+            self._http.patch(
+                f"{repo}/git/refs/heads/{path_segment(default_branch)}",
+                json={"sha": root_sha, "force": True},
+            ).raise_for_status()
+        else:
+            # The auto-init branch carries the owner's default branch name, and GitHub
+            # refuses to delete a repo's default branch: default_branch is created and
+            # made the default before the auto-init branch is deleted.
+            self._http.post(
+                f"{repo}/git/refs", json={"ref": f"refs/heads/{default_branch}", "sha": root_sha}
+            ).raise_for_status()
+            self._http.patch(repo, json={"default_branch": default_branch}).raise_for_status()
+            self._http.delete(
+                f"{repo}/git/refs/heads/{path_segment(initial_branch)}"
+            ).raise_for_status()
         log.info("created repo %s with %d files on %s", git_url_path, len(files), default_branch)
 
     def submit_change(
