@@ -11,6 +11,8 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     import httpx
 
+type Script = dict[tuple[str, str], list[tuple[int, Any] | tuple[int, Any, dict[str, str]]]]
+
 
 class Recorder:
     """Collects requests and plays scripted responses keyed by (method, path).
@@ -19,10 +21,7 @@ class Recorder:
     is (status, body) or (status, body, headers) — the optional third element lets
     a test script pagination signals (Link, X-Next-Page, ...)."""
 
-    def __init__(
-        self,
-        responses: dict[tuple[str, str], list[tuple[int, Any] | tuple[int, Any, dict[str, str]]]],
-    ):
+    def __init__(self, responses: Script):
         self.responses = responses
         self.requests: list[httpx.Request] = []
 
