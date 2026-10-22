@@ -61,6 +61,8 @@ _PAGE_SIZE = 100
 
 
 class GitHubClient:
+    merge_strategies = frozenset(_STRATEGY_TO_METHOD)
+
     def __init__(
         self,
         base_url: str,

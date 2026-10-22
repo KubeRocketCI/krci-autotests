@@ -205,6 +205,11 @@ class VCSProvider(Protocol):
         files: dict[str, str],
     ) -> Change: ...
 
+    @property
+    def merge_strategies(self) -> frozenset[MergeStrategy]:
+        """The strategies merge_change lands; any other raises UnsupportedMergeStrategy."""
+        ...
+
     def merge_change(
         self, git_url_path: str, change: Change, *, strategy: MergeStrategy = MergeStrategy.MERGE
     ) -> None: ...

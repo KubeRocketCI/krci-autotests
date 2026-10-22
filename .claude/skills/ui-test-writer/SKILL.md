@@ -36,7 +36,9 @@ adds the UI workflow, Playwright rules, and pinned portal facts.
 ## Portal gotchas (pinned facts)
 
 - Login: button "Use Service Account Token" → textarea `#sa-token` → button
-  "Sign In" (`LoginPage` implements this). Tests do NOT log in: the
+  "Sign In" of the token form (`LoginPage` implements this). With OIDC enabled
+  the token button sits behind "More options", and the OIDC button is also
+  named "Sign In". Tests do NOT log in: the
   session-scoped `_auth_state` fixture logs in once per worker and replays its
   storage state into every context — request the `overview` fixture for an
   authenticated entry point. Only the dedicated login test uses

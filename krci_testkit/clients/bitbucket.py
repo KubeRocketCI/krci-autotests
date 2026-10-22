@@ -67,6 +67,8 @@ _PAGE_SIZE = 100
 
 
 class BitbucketClient:
+    merge_strategies = frozenset(_STRATEGY_TO_TYPE)
+
     def __init__(
         self,
         base_url: str,
@@ -187,7 +189,8 @@ class BitbucketClient:
         # (409/555 while the PR is still settling after webhook delivery).
         poll_merge(
             lambda: self._http.post(
-                f"{repo}/pullrequests/{change.id}/merge", json={"type": merge_type}
+                f"{repo}/pullrequests/{change.id}/merge",
+                json={"type": "pullrequest_merge_parameters", "merge_strategy": merge_type},
             ),
             lambda resp: resp.json().get("state") == "MERGED",
             retry_statuses=_MERGE_RETRY_STATUSES,

@@ -14,10 +14,12 @@ to /tmp and edit the navigation section — never commit the copy.
 
 import argparse
 
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import expect, sync_playwright
 
 from krci_testkit.auth import portal_token, portal_url
 from krci_testkit.config import load_config
+from krci_testkit.waits import Timeouts
+from tests.ui.pageobjects.login_page import LoginPage
 
 ROLES = ("link", "button", "heading", "textbox", "combobox", "menuitem", "tab")
 
@@ -32,15 +34,12 @@ def main() -> None:
 
     cfg = load_config()
     base_url = portal_url(cfg)
+    expect.set_options(timeout=Timeouts().ui_expect * 1000)
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=not args.headed, slow_mo=300 if args.headed else 0)
         ctx = browser.new_context(ignore_https_errors=cfg.browser_ignore_https_errors)
         page = ctx.new_page()
-        page.goto(base_url)
-        page.get_by_role("button", name="Use Service Account Token").click()
-        page.locator("#sa-token").fill(portal_token(cfg))
-        page.get_by_role("button", name="Sign In").click()
-        page.wait_for_load_state("networkidle")
+        LoginPage(page, base_url).open().login_with_token(portal_token(cfg))
 
         page.goto(base_url.rstrip("/") + args.path)
         page.wait_for_load_state("networkidle")

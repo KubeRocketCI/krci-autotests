@@ -259,7 +259,7 @@ def test_comment_change_posts_pr_comment():
     assert json.loads(rec.requests[0].content) == {"content": {"raw": "/recheck"}}
 
 
-def test_merge_change_maps_strategies_to_bitbucket_types():
+def test_merge_change_maps_strategies_to_bitbucket_merge_strategies():
     repo = "/2.0/repositories/grp/app"
     rec = Recorder({("POST", f"{repo}/pullrequests/7/merge"): [(200, {"state": "MERGED"})] * 3})
     client = _client(rec)
@@ -267,8 +267,8 @@ def test_merge_change_maps_strategies_to_bitbucket_types():
     client.merge_change("/grp/app", change, strategy=MergeStrategy.MERGE)
     client.merge_change("/grp/app", change, strategy=MergeStrategy.SQUASH)
     client.merge_change("/grp/app", change, strategy=MergeStrategy.FAST_FORWARD)
-    types = [json.loads(r.content)["type"] for r in rec.requests]
-    assert types == ["merge_commit", "squash", "fast_forward"]
+    strategies = [json.loads(r.content)["merge_strategy"] for r in rec.requests]
+    assert strategies == ["merge_commit", "squash", "fast_forward"]
 
 
 def test_change_statuses_resolves_head_sha_and_normalizes():

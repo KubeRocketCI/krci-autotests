@@ -61,6 +61,9 @@ filterwarnings = [
 # Tag a run from CI instead, e.g. -o rp_launch_attributes="suite:smoke".
 rp_launch = "krci-autotests"
 rp_verify_ssl = true
+# A skip marks a scenario the target cannot run, not a defect to triage; by default
+# every skipped item lands in To Investigate.
+rp_is_skipped_an_issue = false
 # Keep a stale keep-alive connection from hanging the end of a run: the agent
 # sets no timeout of its own, and only a retry, on a fresh socket, closes the launch.
 rp_connect_timeout = 5

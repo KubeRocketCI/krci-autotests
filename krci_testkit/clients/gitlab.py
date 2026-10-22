@@ -18,6 +18,7 @@ from krci_testkit.clients.protocol import (
     CommitStatus,
     MergeStrategy,
     Request,
+    UnsupportedMergeStrategy,
     http_client,
     normalize_ci_state,
     paginate,
@@ -58,6 +59,10 @@ _PAGE_SIZE = 100
 
 
 class GitLabClient:
+    merge_strategies = frozenset(
+        {MergeStrategy.MERGE, MergeStrategy.SQUASH, MergeStrategy.FAST_FORWARD}
+    )
+
     def __init__(
         self,
         base_url: str,
@@ -175,6 +180,8 @@ class GitLabClient:
         self, git_url_path: str, change: Change, *, strategy: MergeStrategy = MergeStrategy.MERGE
     ) -> None:
         strategy = MergeStrategy(strategy)
+        if strategy not in self.merge_strategies:
+            raise UnsupportedMergeStrategy(f"GitLab has no '{strategy}' merge")
         project = _project(git_url_path)
         if strategy is MergeStrategy.FAST_FORWARD:
             # GitLab's merge endpoint ignores merge_method — it is a PROJECT setting.
