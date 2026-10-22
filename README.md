@@ -24,7 +24,9 @@ VCS access goes through the `VCSProvider` protocol; clients exist for GitLab, Gi
 Bitbucket Cloud and Gerrit. Where a provider has no native equivalent of a neutral merge
 strategy — GitHub has no fast-forward merge, and Gerrit decides the strategy per project
 through `submit_type` rather than per request — the client raises `UnsupportedMergeStrategy`
-rather than substituting a near-equivalent.
+rather than substituting a near-equivalent. Each client declares the strategies it lands
+(`merge_strategies`), and a scenario that needs one its client lacks is skipped before it
+starts: the squash-merge scenario does not run against Gerrit.
 
 Gerrit differs enough to be worth naming: a change is a revision proposed against the target
 branch rather than a pull request from a source branch, landing one needs an approving vote
@@ -207,7 +209,8 @@ See `CLAUDE.md` for the full authoring rules.
 
 ## Known limitations
 
-- Portal auth is ServiceAccount-token only; no Keycloak flow.
+- Portal auth is ServiceAccount-token only, on a portal with or without OIDC enabled; no
+  Keycloak flow.
 - VCS repo cleanup is best-effort teardown via the provider client (the codebase-operator
   deliberately never deletes remote repos). A leftover repo survives only if teardown itself
   dies, and unique run-ID names keep leftovers collision-free.

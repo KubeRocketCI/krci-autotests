@@ -17,7 +17,8 @@ def test_squash_merge_triggers_build(
 ):
     """A squash merge lands the change and triggers the build pipeline.
 
-    Given a ready Codebase with an open, review-passed change
+    Given a provider whose client lands a squash merge (the scenario is skipped otherwise)
+    And   a ready Codebase with an open, review-passed change
     Then  the platform reported a success CI status on the change's head commit
           (the review pipeline's report task posted it — user-visible merge gate)
     When  the change is merged with the squash strategy (neutral verb; the

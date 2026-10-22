@@ -91,6 +91,8 @@ def in_cluster_api_url(host: str) -> str:
 
 
 class GerritClient:
+    merge_strategies = frozenset({MergeStrategy.MERGE})
+
     def __init__(
         self,
         base_url: str,
@@ -181,10 +183,10 @@ class GerritClient:
         self, git_url_path: str, change: Change, *, strategy: MergeStrategy = MergeStrategy.MERGE
     ) -> None:
         strategy = MergeStrategy(strategy)
-        if strategy is not MergeStrategy.MERGE:
+        if strategy not in self.merge_strategies:
             raise UnsupportedMergeStrategy(
                 f"Gerrit decides '{strategy}' per project via submit_type, not per submit "
-                f"request (supported here: {MergeStrategy.MERGE.value})"
+                f"request (supported here: {', '.join(sorted(self.merge_strategies))})"
             )
         self._approve(change.id, _APPROVAL)
         self._submit(change.id, describe=f"change {change.id} merged ({strategy})")
